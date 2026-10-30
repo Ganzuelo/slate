@@ -1,0 +1,42 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {Vault} from '../core.mjs';
+import {validateWhiteboard} from '../whiteboard.mjs';
+const scene = elements => JSON.stringify({type:'excalidraw',version:2,source:'Slate',elements,appState:{viewBackgroundColor:'#ffffff'},files:{}});
+const rectangle = {id:'shape',type:'rectangle',x:10,y:20,width:200,height:100};
+test('whiteboard save, conflicts, inventory, rename, trash and restore retain the portable scene',async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'slate-board-test-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const vault=new Vault(root);await vault.init();
+ const content=scene([rectangle]), saved=await vault.save('Ideas/Sketch.excalidraw',content,null,'whiteboard');
+ assert.equal((await vault.read(saved.path,'whiteboard')).content,content);
+ assert.deepEqual((await vault.inventory()).whiteboards,[saved]);assert.deepEqual(await vault.list(),[]);
+ await assert.rejects(vault.save(saved.path,scene([]),null,'whiteboard'),{status:409});
+ await assert.rejects(vault.save('bad.md',content,null,'whiteboard'),/relative vault path/);
+ await assert.rejects(vault.save('../escape.excalidraw',content,null,'whiteboard'),/Invalid note path/);
+ const changed=await vault.save(saved.path,scene([]),saved.revision,'whiteboard');
+ await assert.rejects(vault.rename(saved.path,'Moved.excalidraw',saved.revision),{status:409});
+ const moved=await vault.rename(saved.path,'Moved.excalidraw',changed.revision);
+ assert.equal((await vault.read(moved.path,'whiteboard')).content,scene([]));
+ const trashed=await vault.trash(moved.path,moved.revision),id=trashed.recoveryPath.split('/').pop();
+ const snapshot=await vault.recoveryRead(id,moved.path);assert.equal(snapshot.kind,'whiteboard');
+ await vault.restore(id,moved.path,null);assert.equal((await vault.read(moved.path,'whiteboard')).content,scene([]));
+ await assert.rejects(vault.restore(id,moved.path,null),{status:409});
+});
+test('whiteboards accept Excalidraw web embeds and embedded SVG images',()=>{
+ assert.doesNotThrow(()=>validateWhiteboard(scene([{...rectangle,type:'embeddable',link:'https://example.com'}])));
+ const value=JSON.parse(scene([]));value.files={icon:{id:'icon',mimeType:'image/svg+xml',dataURL:'data:image/svg+xml;base64,'+Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString('base64')}};
+ assert.doesNotThrow(()=>validateWhiteboard(JSON.stringify(value)));
+ value.files.icon.dataURL='data:image/svg+xml,<svg/>';assert.throws(()=>validateWhiteboard(JSON.stringify(value)),/embedded/);
+});
+test('whiteboards reject unsupported scene types, remote images, invalid geometry and duplicate IDs',()=>{
+ assert.throws(()=>validateWhiteboard('{'),/JSON/);
+ assert.throws(()=>validateWhiteboard(JSON.stringify({nodes:[],edges:[]})),/scene/);
+ assert.throws(()=>validateWhiteboard(scene([rectangle,rectangle])),/element/);
+ assert.throws(()=>validateWhiteboard(scene([{...rectangle,type:'iframe'}])),/element/);
+ assert.throws(()=>validateWhiteboard(scene([{...rectangle,width:-10}])),/element/);
+ const value=JSON.parse(scene([]));value.files={image:{id:'image',mimeType:'image/png',dataURL:'https://example.com/picture.png'}};
+ assert.throws(()=>validateWhiteboard(JSON.stringify(value)),/embedded/);
+});

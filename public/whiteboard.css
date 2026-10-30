@@ -1,0 +1,4 @@
+.whiteboard-view{display:flex;flex:1;min-height:0;flex-direction:column;overflow:hidden}
+.whiteboard-view[hidden]{display:none}
+.whiteboard-host{position:relative;flex:1;min-height:200px;isolation:isolate}
+.whiteboard-host .excalidraw:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}

@@ -1,0 +1,11 @@
+.context-menu{position:fixed;z-index:1000;min-width:220px;max-width:calc(100vw - 12px);overflow:auto;padding:5px;background:var(--secondary);color:var(--text);border:1px solid var(--border);border-radius:7px;box-shadow:var(--shadow-md);font:13px/1.4 'Segoe UI',sans-serif;user-select:none;-webkit-app-region:no-drag}
+.context-menu-item{display:flex;align-items:center;justify-content:flex-start;width:100%;min-height:29px;gap:9px;padding:5px 9px;border-radius:4px;text-align:left;color:var(--text);white-space:nowrap}
+.context-menu-item:hover,.context-menu-item:focus{background:var(--active)}
+.context-menu-item:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}
+.context-menu-item .icon{width:16px;height:16px;color:var(--muted)}
+.context-menu-label{flex:1;overflow:hidden;text-overflow:ellipsis}
+.context-menu-item kbd{padding-left:18px;color:var(--faint);font-size:11px}
+.context-menu-item.danger,.context-menu-item.danger .icon{color:var(--destructive)}
+.context-menu-item:disabled{opacity:.35;background:transparent;cursor:default}
+.context-menu-separator{height:1px;background:var(--border);margin:5px 3px}
+.tab.pinned>.tab-close{opacity:1}

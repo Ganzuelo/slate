@@ -1,0 +1,87 @@
+.slate-editor-host{flex:1;min-height:280px;max-width:700px;width:100%;margin:0 auto;position:relative;font-family:var(--text-font,"Segoe UI",sans-serif)}
+.slate-editor-host .cm-editor{min-height:100%;border:0;background:transparent;color:var(--text)}
+.slate-editor-host .cm-scroller{font-family:inherit;line-height:1.6;overflow:visible}
+.slate-editor-host .cm-content{padding:0 0 160px;min-height:280px;tab-size:4}
+.slate-editor-host .cm-line{padding:0;overflow-wrap:anywhere}
+.slate-editor-host .cm-gutters{display:none}
+.slate-editor-host:has(.cm-lineNumbers) .cm-gutters{display:flex;background:transparent;border:0;color:var(--faint);font-size:12px}
+.slate-editor-host .cm-lineNumbers .cm-gutterElement{min-width:2.2em;padding:0 10px 0 2px;text-align:right}
+.slate-editor-host .cm-activeLine{background:transparent}
+.slate-editor-host .cm-slate-heading{font-family:inherit;font-weight:700;line-height:1.3;color:var(--text);padding-top:.8em;padding-bottom:.4em;letter-spacing:-.015em}
+.slate-editor-host .cm-slate-heading span{text-decoration:none}
+.slate-editor-host .cm-slate-h1{font-size:1.802em}
+.slate-editor-host .cm-slate-h2{font-size:1.602em}
+.slate-editor-host .cm-slate-h3{font-size:1.424em}
+.slate-editor-host .cm-slate-h4{font-size:1.266em}
+.slate-editor-host .cm-slate-h5{font-size:1.125em}
+.slate-editor-host .cm-slate-h6{font-size:1em}
+.slate-editor-host .cm-slate-wikilink,.slate-editor-host .cm-slate-link{color:var(--link);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 45%,transparent);text-underline-offset:2px}
+.slate-editor-host .cm-slate-wikilink{cursor:pointer}
+.external-link-icon{display:inline-block;margin-inline-start:.2em;color:var(--link);line-height:1;vertical-align:baseline;white-space:nowrap}
+.external-link-icon .icon{width:.8em;height:.8em;vertical-align:-.05em}
+.slate-editor-host .cm-slate-marker{color:var(--faint);font-weight:400;text-decoration:none}
+.slate-editor-host .cm-slate-strong{font-weight:700}
+.slate-editor-host .cm-slate-emphasis{font-style:italic}
+.slate-editor-host .cm-slate-strike{text-decoration:line-through}
+.slate-editor-host .cm-slate-highlight{background:var(--highlight-bg);color:inherit;border-radius:2px}
+.slate-editor-host .cm-slate-inline-code{font-family:var(--code-font);font-size:.875em;padding:.1em .35em;border:1px solid var(--code-border);border-radius:4px;background:var(--code-inline-bg);color:var(--code-inline-text);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.slate-editor-host .cm-slate-inline-code .tok-monospace{color:inherit}
+.slate-editor-host .cm-slate-code-line{font-family:var(--code-font);font-size:.875em;line-height:1.65;background:var(--code-bg);color:var(--code-text);padding:0 16px}
+.slate-editor-host .cm-slate-code-fence{color:var(--faint)}
+.slate-editor-host .cm-slate-code-start{position:relative;padding:0 16px;border-radius:8px 8px 0 0;background:var(--code-header-bg);box-sizing:border-box}
+.slate-editor-host .cm-slate-code-start:has(.code-copy){min-height:28px;padding:0 36px 0 16px}
+.slate-editor-host .cm-slate-code-start+.cm-slate-code-line:not(.cm-slate-code-end){padding-top:6px}
+.slate-editor-host .cm-slate-code-end{border-radius:0 0 8px 8px;padding-bottom:4px}
+.slate-editor-host .cm-slate-code-end.cm-slate-code-collapsed{font-size:0;line-height:0;padding:0 16px;min-height:8px;height:8px;overflow:hidden}
+.slate-editor-host .cm-slate-code-end.cm-slate-code-collapsed br,.slate-editor-host .cm-slate-code-end.cm-slate-code-collapsed .cm-widgetBuffer{display:none}
+.slate-editor-host .cm-slate-code-copy{position:absolute;top:50%;right:6px;transform:translateY(-50%)}
+/* Copy button shared by editor and reading-view code blocks. */
+.code-copy{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer}
+.code-copy svg{width:14px;height:14px}
+.code-copy:hover{background:var(--hover);color:var(--text)}
+.code-copy:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.slate-editor-host .cm-slate-code-lang{font:500 11px/1.6 "Segoe UI",sans-serif;letter-spacing:.02em;text-transform:lowercase;color:var(--muted)}
+.slate-editor-host .cm-slate-code-line .tok-monospace{color:inherit}
+.slate-editor-host .cm-slate-bullet{color:var(--faint);display:inline-block;font-size:1.15em;width:.6em}
+.slate-editor-host .cm-slate-task{appearance:none;width:14px;height:14px;vertical-align:-2px;padding:0;margin:0 6px 0 0;border:1px solid var(--muted);border-radius:3px;background:transparent;cursor:pointer}
+.slate-editor-host .cm-slate-task:checked{background:var(--accent-solid);border-color:var(--accent-solid)}
+.slate-editor-host .cm-slate-task:checked{background-image:var(--accent-check);background-position:center;background-size:12px 12px;background-repeat:no-repeat}
+.slate-editor-host .cm-slate-quote-line{border-left:2px solid var(--accent);padding-left:14px;color:var(--muted)}
+.slate-editor-host.is-source-mode .cm-content{font-family:var(--code-font);line-height:1.6}
+/* Syntax tokens from slateHighlighter (live-editor.js), shared by the editor and reading view. */
+.tok-link{color:var(--link);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--link) 45%,transparent);text-underline-offset:2px}
+.tok-heading,.tok-strong{font-weight:700}
+.tok-emphasis{font-style:italic}
+.tok-strike{text-decoration:line-through}
+.tok-meta,.tok-label{color:var(--faint)}
+.slate-editor-host.is-source-mode .tok-monospace{color:var(--code-inline-text)}
+.tok-comment{color:var(--syn-comment);font-style:italic}
+.tok-control{color:var(--syn-control)}
+.tok-keyword{color:var(--syn-keyword)}
+.tok-string{color:var(--syn-string)}
+.tok-regexp{color:var(--syn-regexp)}
+.tok-number{color:var(--syn-number)}
+.tok-function{color:var(--syn-function)}
+.tok-type{color:var(--syn-type)}
+.tok-constant{color:var(--syn-constant)}
+.tok-variable{color:var(--syn-variable)}
+.tok-tag{color:var(--syn-tag)}
+.tok-attribute{color:var(--syn-attribute)}
+.tok-bracket{color:var(--syn-bracket)}
+.tok-invalid{color:var(--syn-invalid)}
+.slate-editor-host .cm-selectionMatch{background:var(--text-selection)}
+.slate-wiki-completions{border:1px solid var(--border)!important;border-radius:6px;background:var(--secondary)!important;color:var(--text)!important;box-shadow:var(--shadow-md);font:13px/1.5 'Segoe UI',sans-serif;max-width:min(480px,calc(100vw - 16px))}
+.slate-wiki-completions ul,.slate-wiki-completions:not(.cm-tooltip){padding:4px!important;max-height:280px;overflow:auto;min-width:min(300px,calc(100vw - 16px))}
+.slate-wiki-completions:not(.cm-tooltip){position:fixed;z-index:1000}
+.slate-wiki-completions ul li,.slate-wiki-completions [role=option]{display:flex;align-items:center;gap:16px;min-height:32px;padding:5px 8px!important;border-radius:3px;white-space:nowrap;font-family:'Segoe UI',sans-serif}
+.slate-wiki-completions ul li:hover,.slate-wiki-completions [role=option]:hover{background:var(--hover)}
+.slate-wiki-completions ul li[aria-selected],.slate-wiki-completions [role=option][aria-selected=true]{background:var(--active)!important;color:var(--text)!important}
+.slate-wiki-completions .cm-completionLabel,.slate-wiki-completions [role=option]>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.slate-wiki-completions .cm-completionDetail,.slate-wiki-completions small{margin-left:auto;font-size:11px;font-style:normal;color:var(--muted);overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* Editable text matches :focus-visible even after a pointer click, and Tab
+   inside the note is an editing key. The caret is the focus indicator. */
+.slate-editor-host .cm-editor,
+.slate-editor-host .cm-editor.cm-focused,
+.slate-editor-host .cm-content:focus,
+.slate-editor-host .cm-content:focus-visible,
+#editor:focus,#editor:focus-visible{outline:none}

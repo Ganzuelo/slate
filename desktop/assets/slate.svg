@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <path id="rock" d="M165 228 L215 190 L300 150 L380 110 L470 92 L560 88 L602 100 L618 132 L652 160 L680 196 L692 242 L686 290 L670 330 L642 370 L602 402 L562 432 L522 470 L486 510 L458 558 L440 562 L400 550 L330 542 L272 532 L236 516 L208 498 L186 466 L162 428 L146 388 L150 348 L160 302 L176 270 Z"/>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f5f7"/>
+      <stop offset="1" stop-color="#cdd2d9"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#tile)"/>
+  <rect x="68" y="68" width="888" height="888" rx="196" fill="none" stroke="url(#sheen)" stroke-width="6"/>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="none" stroke="#000" stroke-opacity="0.16" stroke-width="4"/>
+  <g transform="translate(512 512) scale(0.7) translate(-508 -529) translate(70 150) scale(1.6) translate(-145 -88)" stroke-linejoin="round" stroke-linecap="round">
+    <!-- drop shadow -->
+    <use href="#rock" transform="translate(-14 16)" fill="#000" opacity="0.28" filter="url(#soft)"/>
+    <!-- front/left face -->
+    <use href="#rock" fill="#373737"/>
+    <!-- right face -->
+    <path d="M602 100 L618 132 L652 160 L680 196 L692 242 L686 290 L670 330 L642 370 L602 402 L562 432 L522 470 L486 510 L458 558 L452 520 L446 482 L402 458 L356 428 L378 396 L386 356 L372 306 L420 262 L460 216 L490 172 L520 136 L574 110 Z" fill="#2a2a2a"/>
+    <!-- top face -->
+    <path d="M165 228 L215 190 L300 150 L380 110 L470 92 L560 88 L602 100 L574 110 L520 136 L490 172 L460 216 L420 262 L372 306 L300 334 L246 320 L202 296 L184 262 Z" fill="#464646"/>
+
+    <!-- edge highlights -->
+    <g fill="none" stroke="#a9a9a9">
+      <path d="M186 258 Q196 292 236 312 Q296 336 372 306" stroke-width="5"/>
+      <path d="M372 306 Q392 352 378 394 Q366 414 356 428 Q404 452 444 476 Q452 520 454 556" stroke-width="4.5"/>
+      <path d="M572 112 Q520 132 498 166 Q480 192 468 206" stroke-width="3" opacity="0.75"/>
+    </g>
+
+    <!-- top face texture -->
+    <g>
+      <path d="M432 128 Q395.7 166.4 360 214 Q400.9 170.7 432 128Z" fill="#555"/>
+      <path d="M396 150 Q365.6 192.7 330 238 Q370.9 196.7 396 150Z" fill="#2f2f2f"/>
+      <path d="M488 112 Q466.8 137.6 440 176 Q470.6 140.5 488 112Z" fill="#555"/>
+      <path d="M316 200 Q277.1 224.7 250 258 Q280.6 228.7 316 200Z" fill="#555"/>
+      <path d="M352 260 Q328 281.4 300 300 Q330.4 284.5 352 260Z" fill="#2f2f2f"/>
+      <path d="M258 214 Q246.7 219.2 238 228 Q248.3 221.4 258 214Z" fill="#5a5a5a"/>
+      <path d="M534 108 Q518.5 120.4 508 132 Q520.3 122.3 534 108Z" fill="#5a5a5a"/>
+    </g>
+
+    <!-- right face texture -->
+    <g>
+      <path d="M612 150 Q586.1 186.8 548 228 Q590.8 190.6 612 150Z" fill="#1c1c1c"/>
+      <path d="M640 236 Q597.8 257.6 552 280 Q600.4 262.9 640 236Z" fill="#1c1c1c"/>
+      <path d="M600 300 Q557.5 329.5 510 350 Q560.5 334.9 600 300Z" fill="#1c1c1c"/>
+      <path d="M540 196 Q506.7 226.8 476 262 Q510.7 230.6 540 196Z" fill="#363636"/>
+      <path d="M560 376 Q523.8 400.7 494 420 Q526.4 404.7 560 376Z" fill="#363636"/>
+      <path d="M492 470 Q477.8 489.1 474 514 Q480.4 490.2 492 470Z" fill="#363636"/>
+      <path d="M662 296 Q646.1 316.4 630 334 Q648.4 318.3 662 296Z" fill="#363636"/>
+    </g>
+
+    <!-- front face texture -->
+    <g>
+      <path d="M176 344 Q222 380 252 392 Q290 384 330 360" stroke="#4a4a4a" stroke-width="4" fill="none"/>
+      <path d="M212 426 Q244 452 268 452 Q300 440 326 420" stroke="#4a4a4a" stroke-width="4" fill="none"/>
+      <path d="M232 478 Q261.2 501.4 300 494 Q262.2 497.3 232 478Z" fill="#2c2c2c"/>
+      <path d="M366 476 Q390.3 500.7 420 510 Q392.3 497.5 366 476Z" fill="#2c2c2c"/>
+      <path d="M188 304 Q212 332.6 240 344 Q214.4 329.5 188 304Z" fill="#2c2c2c"/>
+    </g>
+  </g>
+</svg>

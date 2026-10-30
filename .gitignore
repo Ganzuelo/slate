@@ -1,0 +1,25 @@
+# Dependencies and caches
+node_modules/
+.npm-cache/
+npm-debug.log*
+
+# Private reverse-engineering notes
+REA-FINDINGS.md
+research/PARITY.md
+
+# Verification output: screenshots, disposable vaults, REA captures, comparison notes
+# (the folder itself is kept because the verify scripts write into it)
+evidence/*
+!evidence/.gitkeep
+
+# Slate per-vault data: history, recovery/trash, icon assignments
+# (.lattice-* is the pre-rename equivalent)
+.slate-*
+.lattice-*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

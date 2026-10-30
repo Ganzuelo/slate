@@ -1,0 +1,62 @@
+/* Shared floating surfaces and compact form controls. */
+.ui-tooltip{position:fixed;inset:auto;margin:0;max-width:min(320px,calc(100vw - 16px));padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--secondary);color:var(--text);box-shadow:var(--popover-shadow);font:12px/1.4 'Segoe UI',sans-serif;text-align:center;overflow:visible;overflow-wrap:anywhere;user-select:none;pointer-events:auto;animation:tooltip-in .12s ease-out}
+.ui-tooltip::after{content:"";position:absolute;width:8px;height:8px;background:inherit;transform:translate(-50%,-50%) rotate(45deg);pointer-events:none}
+.ui-tooltip[data-side=top]::after{left:var(--tooltip-arrow-x);top:100%}
+.ui-tooltip[data-side=bottom]::after{left:var(--tooltip-arrow-x);top:0}
+.ui-tooltip[data-side=left]::after{left:100%;top:var(--tooltip-arrow-y)}
+.ui-tooltip[data-side=right]::after{left:0;top:var(--tooltip-arrow-y)}
+@keyframes tooltip-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.ui-tooltip{animation:none}}
+:root{--popover:var(--bg);--popover-shadow:0 4px 6px -1px #0002,0 10px 20px -4px #0003;--control-radius:6px}
+html[data-theme=light]{--popover-shadow:0 4px 6px -1px #0001,0 10px 20px -4px #0002}
+.ui-select{min-width:0;width:100%}
+.settings-nav button{gap:9px}.settings-nav button>[data-icon]{display:inline-flex;flex:none}.settings-nav button .icon{width:16px;height:16px}.settings-label{flex:1;min-width:0}
+.accent-setting{flex-direction:column;align-items:stretch;gap:12px}.accent-setting>.accent-controls{width:100%;flex:none}.accent-presets{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}.accent-preset{width:32px;height:32px;padding:6px;border-radius:6px}.accent-preset[aria-pressed=true]{background:var(--active)}.accent-dot{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%}.accent-dot .icon{width:14px;height:14px;visibility:hidden}.accent-preset[aria-pressed=true] .icon{visibility:visible}
+.accent-custom{display:flex;align-items:center;gap:8px}.accent-setting #accentColorPicker{width:40px;height:32px;padding:2px;flex:none;cursor:pointer}.accent-setting #accentColorHex{width:110px;height:32px;font-family:var(--code-font);font-size:12px}.accent-reset{width:32px;height:32px;padding:6px}.accent-reset .icon{width:16px;height:16px}.accent-error{font-size:12px;color:var(--destructive);margin:8px 0 0}.accent-error:empty{display:none}
+.setting-row input[type=checkbox]:checked:after{background:var(--accent-on)}input[type=checkbox],input[type=radio]{accent-color:var(--accent-solid)}button.primary.danger{background:color-mix(in srgb,var(--destructive) 14%,var(--bg));color:var(--destructive)}
+.ui-select select[hidden]{display:none}
+.ui-select-trigger{width:100%;min-height:36px;justify-content:space-between;gap:12px;padding:7px 11px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--bg);color:var(--text);text-align:left;box-shadow:var(--shadow-sm)}
+.ui-select-trigger:hover{background:var(--hover)}
+.ui-select-trigger[aria-expanded=true]{background:var(--active)}
+.ui-select-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ui-select-trigger>.icon{width:15px;height:15px;color:var(--muted)}
+.ui-select-content{position:fixed;inset:auto;margin:0;padding:4px;border:1px solid var(--border);border-radius:var(--control-radius);background:var(--popover);color:var(--text);box-shadow:var(--popover-shadow);overflow:auto;overscroll-behavior:contain;font:13px/1.4 'Segoe UI',sans-serif}
+.ui-select-option{display:flex;align-items:center;gap:16px;min-height:32px;padding:7px 8px;border-radius:3px;cursor:pointer;user-select:none}
+.ui-select-option>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.ui-select-option>.icon{width:15px;height:15px;visibility:hidden}
+.ui-select-option[aria-selected=true]{background:var(--active)}
+.ui-select-option[aria-selected=true]>.icon{visibility:visible}
+.ui-select-option:hover,.ui-select-option:focus{background:var(--hover)}
+.ui-select-option:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.ui-select-option[aria-disabled=true]{opacity:.4;pointer-events:none}
+.setting-row>.ui-select{flex:0 0 160px;font-size:12px}
+.setting-control>.ui-select{flex:0 0 190px;width:190px;font-size:13px}
+.setting-row>div:first-child{min-width:0}
+.context-menu{background:var(--popover);padding:4px;border-radius:var(--control-radius);box-shadow:var(--popover-shadow)}
+.context-menu-item{min-height:32px;padding:6px 8px;gap:8px;border-radius:3px}
+.context-menu-item:hover{background:var(--hover)}
+.context-menu-item:focus{background:var(--active)}
+.context-menu-item:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.context-menu-item kbd{font-size:11px;letter-spacing:.025em;color:var(--muted)}
+.context-menu-item.danger,.context-menu-item.danger .icon{color:var(--destructive)}
+.context-menu-item.danger:hover,.context-menu-item.danger:focus{background:color-mix(in srgb,var(--destructive) 10%,transparent)}
+.context-menu-separator{margin:4px -4px}
+.vault-footer{align-items:center;gap:4px;padding:4px 8px}
+.vault-footer>#vaultNameButton{flex:1;min-width:0;justify-content:flex-start;height:30px;padding:5px 6px;color:var(--text)}
+.vault-footer>#vaultNameButton[aria-expanded=true]{background:var(--active)}
+.vault-footer #vaultName{flex:1;text-align:left}
+
+.vault-footer>#settingsButton{flex:none;width:30px;height:30px;padding:6px}
+.vault-footer>#settingsButton .icon{width:17px;height:17px}
+.vault-manager{width:640px}
+.vault-manager>h2{margin-bottom:8px}
+#vaultManagerList{max-height:45vh;overflow:auto;margin-top:20px}
+.vault-manager-row{display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid var(--border)}
+.vault-manager-details{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.vault-manager-details strong{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.vault-manager-details>span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.vault-manager-row>button{flex:none;min-width:30px;min-height:30px}
+.vault-current{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
+.vault-current .icon{width:14px;height:14px}
+#vaultManagerError{font-size:12px;color:var(--destructive)}
+@media(prefers-reduced-motion:no-preference){.ui-select-content:popover-open,.context-menu{animation:surface-in 100ms ease-out}@keyframes surface-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}}
