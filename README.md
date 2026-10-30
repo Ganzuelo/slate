@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/editor.png" alt="Slate editor with wiki-link autocomplete" width="860">
+  <img src="docs/screenshots/editor.png" alt="Slate editing a note in live preview, with file icons, tabs, and backlinks" width="860">
 </p>
 
 ---
@@ -128,6 +128,7 @@ Details: [desktop/README.md](desktop/README.md).
 | `npm run build:icons` | Rebuild the Lucide icon bundle |
 | `npm run build:whiteboard` | Rebuild the Excalidraw bundle and license notices |
 | `npm run build:app-icon` | Regenerate the app icon PNGs and `.ico` |
+| `npm run capture:readme` | Re-capture the README hero screenshot from a disposable showcase vault |
 
 Generated bundles in `public/vendor/` are checked in, so a rebuild is only needed after changing their sources or dependencies. UI changes should follow [DESIGN.md](DESIGN.md).
 

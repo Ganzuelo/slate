@@ -17,7 +17,8 @@
     "build:editor": "node scripts/build-editor.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "build:app-icon": "electron scripts/build-app-icon.mjs",
-    "build:whiteboard": "node scripts/build-whiteboard.mjs"
+    "build:whiteboard": "node scripts/build-whiteboard.mjs",
+    "capture:readme": "electron scripts/capture-readme.cjs"
   },
   "devDependencies": {
     "electron": "44.10.0",
