@@ -35,6 +35,8 @@ let notes=[], folders=[], attachments=[], canvases=[], whiteboards=[], current=n
 let pendingSwitch=null,copyDraft=null,dialogAction='new',saving=false,split=false,historyPaths=[],historyIndex=-1,paletteKind='commands',paletteItems=[],paletteIndex=0,paletteVisible=[],canvasState=null,canvasSelected=null,canvasLinkFrom=null,canvasZoom=1,graphLocal=false,tasksFilter='all',taskBusy=false,editingTask=null;
 const drafts = new Map();
 const autoSaveTimers = new Map();
+const autoSaveStarted = new Map();
+let saveTail = Promise.resolve(), openGeneration = 0;
 let ribbonLayout=null;
 let explorerPins=new Set();
 function icon(name, canonical = false) {
@@ -47,13 +49,33 @@ function button(text, action, className='') { const el=document.createElement('b
 function message(text='') { $('message').textContent=text;$('message').hidden=!text; }
 async function api(route,data) {
  const response=await fetch('/api/'+route,{method:data?'PUT':'GET',headers:{'X-Slate-Token':token||'',...(data?{'Content-Type':'application/json'}:{})},...(data?{body:JSON.stringify(data)}:{})});
- const result=await response.json();if(!response.ok)throw new Error(result.error);return result;
+ const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.error),{status:response.status});return result;
 }
 function getText() { return liveEditor && !settings.livePreview ? $('editor').value : liveEditor && mode==='edit' ? liveEditor.getValue() : $('editor').value; }
 function setText(value) { $('editor').value=value;liveEditor?.setValue(value);resizeEditor(); }
 function resizeEditor() { const el=$('editor');if(el.style){el.style.height='auto';el.style.height=Math.max(450,el.scrollHeight)+'px';} }
-function queueAutoSave(note){if(!settings.autoSave)return;clearTimeout(autoSaveTimers.get(note.path));autoSaveTimers.set(note.path,setTimeout(()=>{autoSaveTimers.delete(note.path);if(note.dirty)save(note);},900));}
+function queueAutoSave(note){if(!settings.autoSave)return;if(!autoSaveStarted.has(note.path))autoSaveStarted.set(note.path,Date.now());clearTimeout(autoSaveTimers.get(note.path));const delay=Math.min(900,Math.max(0,2000-(Date.now()-autoSaveStarted.get(note.path))));autoSaveTimers.set(note.path,setTimeout(()=>{autoSaveTimers.delete(note.path);autoSaveStarted.delete(note.path);if(note.dirty)save(note);},delay));}
 function draftChanged(text) { if(!current || current.type!=='note')return;current.content=text;current.dirty=true;dirty=true;$('editor').value=text;renderTabs();update();schedulePersist();queueAutoSave(current); }
+function syncSavedText(text) {
+ const editor=$('editor'), previous=editor.value, start=editor.selectionStart, end=editor.selectionEnd, scroll=editor.scrollTop;
+ let from=0, oldEnd=previous.length, newEnd=text.length;
+ while(from<oldEnd&&from<newEnd&&previous[from]===text[from])from++;
+ while(oldEnd>from&&newEnd>from&&previous[oldEnd-1]===text[newEnd-1]){oldEnd--;newEnd--;}
+ const map=position=>position<=from?position:position>=oldEnd?position+newEnd-oldEnd:newEnd;
+ editor.value=text;
+ if(Number.isFinite(start)&&Number.isFinite(end))editor.setSelectionRange?.(map(start),map(end));
+ editor.scrollTop=scroll;
+ if(liveEditor?.syncValue)liveEditor.syncValue(text);else liveEditor?.setValue(text);
+ resizeEditor();update();
+}
+function reconcileNotes(incoming) {
+ for(const data of incoming){
+  const draft=drafts.get(data.path);
+  if(!draft||draft.type!=='note'||draft.dirty||draft.saving||!data.revision||draft.revision===data.revision)continue;
+  Object.assign(draft,{content:data.content,original:data.content,revision:data.revision});
+  if(current===draft)syncSavedText(data.content);
+ }
+}
 function fontStack(value, fallback) {
  const families = String(value ?? '').split(',').map(part => part.trim().replace(/['";{}]/g, '')).filter(Boolean);
  if (!families.length) return fallback;
@@ -97,8 +119,9 @@ function schedulePersist() { clearTimeout(persistTimer);persistTimer=setTimeout(
 function workspace() { return {version:2,tabs,activeTab,bookmarks,explorerPins:[...explorerPins],settings,leftClosed,rightClosed,closedFolders:[...closedFolders],drafts:[...drafts.values()].filter(n=>n.dirty).map(n=>({path:n.path,type:n.type,content:n.content,revision:n.revision,original:n.original,dirty:true})).slice(0,30)}; }
 function persist() { const state=workspace();storage.set('workspace',state);storage.set('bookmarks',bookmarks);desktop?.saveWorkspace(state).catch(e=>message(e.message)); }
 async function refresh() {
+ const revisions=new Map([...drafts].map(([path,draft])=>[path,draft.revision]));
  if (window.SlateNoteIcons && !iconWriteBusy) { const before = vaultIcons; try { const result = await api('icons'); if (!iconWriteBusy && vaultIcons === before) vaultIcons = result; } catch (error) { message(error.message); } }
- const result=await api('notes');notes=result.notes;folders=result.folders||[];attachments=result.attachments||[];canvases=result.canvases||[];whiteboards=result.whiteboards||[];$('vaultName').textContent=result.vault;renderFiles();renderContext();liveEditor?.refreshTasks?.();if(window.SlateNoteIcons)repaintNoteIcons();if(activeTab==='@graph')renderGraph();if(activeTab==='@tasks')renderTasks();
+ const result=await api('notes');notes=result.notes;reconcileNotes(notes.filter(note=>drafts.get(note.path)?.revision===revisions.get(note.path)));folders=result.folders||[];attachments=result.attachments||[];canvases=result.canvases||[];whiteboards=result.whiteboards||[];$('vaultName').textContent=result.vault;renderFiles();renderContext();liveEditor?.refreshTasks?.();if(window.SlateNoteIcons)repaintNoteIcons();if(activeTab==='@graph')renderGraph();if(activeTab==='@tasks')renderTasks();
 }
 function allFiles() { return [...notes.map(n=>({...n,type:'note'})),...canvases.map(n=>({...n,type:'canvas'})),...whiteboards.map(n=>({...n,type:'whiteboard'}))].sort((a,b)=>a.path.localeCompare(b.path)); }
 function setSidebar(next) { sidebar=next;$('searchPanel').hidden=next!=='search';$('fileActions').hidden=next!=='files';for(const name of ['files','search','bookmarks','tags']){$(name+'Button').classList.toggle('active',name===next);$(name+'Button').setAttribute('aria-selected',String(name===next));}if(leftClosed){leftClosed=false;applySettings();}renderFiles();if(next==='search')$('search').focus(); }
@@ -139,11 +162,14 @@ function renderTabs() {
 function addTab(path,type) {if(!tabs.some(t=>t.path===path))tabs.push({path,type});activeTab=path;renderTabs();schedulePersist();}
 function requestOpen(path,type=fileType(path),fromHistory=false) {openNote(path,type,fromHistory).catch(e=>message(e.message));}
 async function openNote(path,type=fileType(path),fromHistory=false) {
+ const generation=++openGeneration;
+ if(current?.dirty&&settings.autoSave)save(current);
  if(path==='@tasks'){activeTab='@tasks';addTab(path,'tasks');showView('tasksView');renderBreadcrumb('Tasks');renderTasks();return;}
  if(path==='@graph'){activeTab='@graph';addTab(path,'graph');showView('graphView');renderBreadcrumb('Graph view');renderGraph();return;}
  if(type==='whiteboard'&&!excalidrawEnabled()){message('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw to open whiteboards.');if(!current)showView('emptyView');return;}
  let note=drafts.get(path);
- if(!note){const data=await api(type+'?path='+encodeURIComponent(path));note={...data,type,original:data.content,dirty:false};drafts.set(path,note);}
+ if(!note||!note.dirty){const revision=note?.revision;const data=await api(type+'?path='+encodeURIComponent(path));if(generation!==openGeneration)return;note=drafts.get(path)||{type};if(!note.dirty&&!note.saving&&note.revision===revision)Object.assign(note,data,{original:data.content,dirty:false});drafts.set(path,note);}
+ if(generation!==openGeneration)return;
  const isNewTab=!tabs.some(t=>t.path===path);
  current=note;dirty=!!note.dirty;activeTab=path;addTab(path,type);message();
  if(!fromHistory){historyPaths=historyPaths.slice(0,historyIndex+1);if(historyPaths.at(-1)!==path)historyPaths.push(path);historyIndex=historyPaths.length-1;}
@@ -171,7 +197,7 @@ function revealFolder(path) {
 }
 function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const name of ['noteView','emptyView','graphView','canvasView','tasksView','whiteboardView'])$(name).hidden=name!==id;for(const name of ['viewModeButton','wordCount','characterCount'])$(name).hidden=id==='whiteboardView';if(id==='whiteboardView')$('modeStatus').textContent='Whiteboard';}
 function syncBookmarkButton() {const button=$('bookmarkButton');if(!button)return;const bookmarked=!!current&&bookmarks.includes(current.path);button.classList.toggle('active',bookmarked);button.setAttribute('aria-pressed',String(bookmarked));if(button.dataset)button.dataset.tooltip=bookmarked?'Remove bookmark':'Bookmark note';button.setAttribute('aria-label',bookmarked?'Remove bookmark':'Bookmark note');}
-function afterSafe(action) {if(current?.dirty){pendingSwitch=action;$('switchDialog').showModal();}else action();}
+function afterSafe(action) {if(current?.dirty&&settings.autoSave){save(current).then(saved=>{if(saved)action();});}else if(current?.dirty){pendingSwitch=action;$('switchDialog').showModal();}else action();}
 function closeTab(path,onClosed=()=>{}) {
  if(tabs.find(tab=>tab.path===path)?.pinned){message('Unpin this tab before closing it.');return;}
  const draft=drafts.get(path);
@@ -185,13 +211,38 @@ function closeTab(path,onClosed=()=>{}) {
   schedulePersist();onClosed();
  };
  const run=()=>finish().catch(error=>message(error.message));
- if(draft?.dirty){if(activeTab!==path)requestOpen(path,draft.type);pendingSwitch=run;$('switchDialog').showModal();}else run();
+ if(draft?.dirty&&settings.autoSave){save(draft).then(saved=>{if(saved)run();});}
+ else if(draft?.dirty){if(activeTab!==path)requestOpen(path,draft.type);pendingSwitch=run;$('switchDialog').showModal();}else run();
 }
-async function save(requested) {
+function save(requested) {
  const target=requested&&typeof requested.path==='string'?requested:current;
- if(saving){if(target?.dirty)queueAutoSave(target);return false;}if(!target)return true;saving=true;
- try{const raw=target===current?(target.type==='whiteboard'?target.content:target.type==='canvas'?JSON.stringify(canvasState,null,2):getText()):target.content;const content=target.original?.includes('\r\n')?raw.replace(/\r?\n/g,'\r\n'):raw;const result=await api(target.type,{path:target.path,content,revision:target.revision});target.revision=result.revision;target.original=content;const latest=target===current&&target.type==='note'?getText():target.content;target.dirty=latest!==raw;target.content=latest;dirty=!!current?.dirty;message();await refresh();renderTabs();schedulePersist();return true;}
- catch(e){message(e.message+' Use Save a copy to preserve your draft.');return false;}finally{saving=false;}
+ const run=async()=>{
+  if(!target)return true;
+  if(saving){queueAutoSave(target);return false;}
+  clearTimeout(autoSaveTimers.get(target.path));autoSaveTimers.delete(target.path);
+  autoSaveStarted.delete(target.path);
+  saving=true;target.saving=true;
+  try{
+   do{
+    const raw=target.content;
+    const content=target.original?.includes('\r\n')?raw.replace(/\r?\n/g,'\r\n'):raw;
+    let result;
+    for(let attempt=0;;attempt++){
+     try{result=await api(target.type,{path:target.path,content,revision:target.revision,...(target.type==='note'?{baseContent:target.original}:{})});break;}
+     catch(error){if(error.status!==409||target.type!=='note'||attempt>=2)throw error;}
+    }
+    const saved=result.content??content, latest=target.content;
+    // Rebase keystrokes made while the write was pending onto the saved merge.
+    const next=latest===raw?saved:target.type==='note'&&window.SlateNoteMerge?window.SlateNoteMerge(raw,latest,saved)??latest:latest;
+    target.revision=result.revision;target.original=saved;target.content=next;target.dirty=next!==saved;
+    if(current===target&&target.type==='note'&&next!==latest)syncSavedText(next);
+    dirty=!!current?.dirty;renderTabs();schedulePersist();
+   }while(target.dirty);
+   message();return true;
+  }catch(e){message(e.message+' Your draft is kept.');schedulePersist();return false;}
+  finally{target.saving=false;saving=false;refresh().catch(e=>message(e.message));}
+ };
+ const pending=saveTail.then(run);saveTail=pending.catch(()=>{});return pending;
 }
 function update() {const text=current?.type!=='note'?'':$('editor').value;$('wordCount').textContent=(text.trim().match(/\S+/g)?.length||0)+' words';$('characterCount').textContent=text.length+' characters';if((mode==='preview'||split)&&current?.type==='note'){$('preview').innerHTML=markdown(text);hydrateEmbeds();hydrateTaskQueries();hydrateCodeBlocks();if(window.SlateNoteIcons)hydrateNoteColors($('preview'));}renderContext();}
 function setMode(next) {if(current?.type==='whiteboard')return;mode=next;const editing=next==='edit';const live=editing&&settings.livePreview&&liveEditor;$('editor').hidden=!editing||!!live;if($('liveEditor'))$('liveEditor').hidden=!live;$('preview').hidden=editing&&!split;const viewModeButton=$('viewModeButton');viewModeButton.innerHTML=icon(editing?'book':'pencil');if(viewModeButton.dataset){viewModeButton.dataset.icon=editing?'book':'pencil';viewModeButton.dataset.tooltip=editing?'Reading view (Ctrl+E)':'Editing view (Ctrl+E)';}viewModeButton.setAttribute('aria-label',editing?'Reading view':'Editing view');$('noteView').classList.toggle('split',split&&editing);$('modeStatus').textContent=editing?(settings.livePreview&&liveEditor?'Live preview':'Source mode'):'Reading view';if(live)liveEditor.setValue($('editor').value);update();schedulePersist();}
@@ -404,7 +455,7 @@ function renderSettings(page){
   toggle(display,'Right-to-left (RTL)','Sets the default text direction of notes to right-to-left.',()=>settings.rightToLeft,v=>{settings.rightToLeft=v;});
   const behavior=group('Behavior');
   toggle(behavior,'Spellcheck','Turn on the spellchecker.',()=>settings.spellcheck,v=>{settings.spellcheck=v;});
-  toggle(behavior,'Automatically save changes','Save after a short pause. Conflicts preserve your draft.',()=>settings.autoSave,v=>{settings.autoSave=v;});
+  toggle(behavior,'Automatically save changes','Save continuously and merge external note changes automatically.',()=>settings.autoSave,v=>{settings.autoSave=v;if(v)for(const draft of drafts.values())if(draft.dirty)queueAutoSave(draft);});
   toggle(behavior,'Indent using tabs','Use tabs to indent by pressing the “Tab” key. Turn this off to indent using 4 spaces.',()=>settings.useTab,v=>{settings.useTab=v;});
   slider(behavior,'Indent visual width','Number of spaces a tab character will render as.',()=>settings.tabSize,v=>{settings.tabSize=v;},{min:2,max:8,step:1,format:value=>String(value),resetValue:4});
  }

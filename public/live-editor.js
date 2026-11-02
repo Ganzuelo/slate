@@ -8,6 +8,9 @@ import { html } from '@codemirror/lang-html';
 import { syntaxHighlighting, indentUnit } from '@codemirror/language';
 import { tags as t, tagHighlighter, highlightCode } from '@lezer/highlight';
 import { autocompletion, acceptCompletion } from '@codemirror/autocomplete';
+import { mergeNote } from '../note-merge.mjs';
+
+window.SlateNoteMerge = mergeNote;
 
 // Token classes are colored by theme tokens in editor.css, so links and code
 // stay legible in both light and dark themes. CodeMirror's defaultHighlightStyle
@@ -362,6 +365,16 @@ function mount(container, options = {}) {
     getValue: () => view.state.doc.toString(),
     getSelection: () => ({ from: view.state.selection.main.from, to: view.state.selection.main.to }),
     refreshTasks: () => view.dispatch({effects:refreshTaskQueries.of(null)}),
+    syncValue(value) {
+      const previous=view.state.doc.toString();value=String(value);
+      if(previous===value)return;
+      let from=0, oldEnd=previous.length, newEnd=value.length;
+      while(from<oldEnd&&from<newEnd&&previous[from]===value[from])from++;
+      while(oldEnd>from&&newEnd>from&&previous[oldEnd-1]===value[newEnd-1]){oldEnd--;newEnd--;}
+      setting=true;
+      try{view.dispatch({changes:{from,to:oldEnd,insert:value.slice(from,newEnd)}});}
+      finally{setting=false;}
+    },
     setValue(value) {
       if (String(value) === view.state.doc.toString()) return;
       setting = true;

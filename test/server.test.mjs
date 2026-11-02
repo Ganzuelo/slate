@@ -39,6 +39,9 @@ test('HTTP authentication, origin checks, disk persistence and conflict handling
   const listing = await (await fetch(origin+'/api/notes',{headers})).json(); assert.equal(listing.notes.length,1);
   const update = await fetch(origin+'/api/note',{method:'PUT',headers,body:JSON.stringify({path:first.path,content:'updated',revision:first.revision})}); assert.equal(update.status,200);
   const stale = await fetch(origin+'/api/note',{method:'PUT',headers,body:JSON.stringify({path:first.path,content:'stale',revision:first.revision})}); assert.equal(stale.status,409);
+  const merged = await fetch(origin+'/api/note',{method:'PUT',headers,body:JSON.stringify({path:first.path,content:'# Hello\n\n[[Other]]\nLocal addition',revision:first.revision,baseContent:'# Hello\n\n[[Other]]'})});
+  assert.equal(merged.status,200);const mergedNote=await merged.json();assert.ok(mergedNote.content.includes('Local addition'));
+  assert.equal(await fs.readFile(path.join(root,'Nested','Hello.md'),'utf8'),mergedNote.content);
   const traversal = await fetch(origin+'/api/note',{method:'PUT',headers,body:JSON.stringify({path:'../escape.md',content:'bad',revision:null})}); assert.equal(traversal.status,400);
   assert.equal((await fetch(origin+'/.obsidian/plugins/main.js')).status,404);
   const put = (operation, data, extraHeaders = {}) => fetch(origin + '/api/' + operation, {method:'PUT',headers:{...headers,...extraHeaders},body:JSON.stringify(data)});

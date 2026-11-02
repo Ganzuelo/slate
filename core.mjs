@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { IconStore } from './icon-store.mjs';
 import { validateWhiteboard } from './whiteboard.mjs';
+import { mergeNote } from './note-merge.mjs';
 
 export const hash = text => createHash('sha256').update(text).digest('hex');
 const conflict = message => Object.assign(new Error(message), { status: 409 });
@@ -67,7 +68,7 @@ export class Vault {
     await walk(this.root);
     return notes.sort((a, b) => a.path.localeCompare(b.path));
   }
-  save(name, content, revision, kind = 'note') {
+  save(name, content, revision, kind = 'note', baseContent) {
     const run = async () => {
       if (typeof content !== 'string' || Buffer.byteLength(content) > 4 * 1024 * 1024) throw new Error('Note exceeds 4 MiB limit.');
       if (kind === 'canvas') validateCanvas(content);
@@ -76,8 +77,18 @@ export class Vault {
       let current = null;
       try { current = await fs.readFile(file, 'utf8'); } catch (e) { if (e.code !== 'ENOENT') throw e; }
       if ((current === null ? null : hash(current)) !== revision) {
-        const e = new Error('This note changed on disk. Your draft is preserved. Reload the note or save your draft as a new note.'); e.status = 409; throw e;
+        if (kind === 'note' && current !== null && typeof baseContent === 'string' && Buffer.byteLength(baseContent) <= 4 * 1024 * 1024 && hash(baseContent) === revision) {
+          // Automatic merging is best effort for overlapping replacements. Both
+          // complete inputs remain available through File recovery.
+          await this.recovery([{path:name,content:current,revision:hash(current)}], 'conflict');
+          await this.recovery([{path:name,content,revision:hash(content)}], 'conflict');
+          content = mergeNote(baseContent, content, current);
+          revision = hash(current);
+        } else {
+          const e = new Error('This note changed on disk. Your draft is preserved. Reload the note or save your draft as a new note.'); e.status = 409; throw e;
+        }
       }
+      if (Buffer.byteLength(content) > 4 * 1024 * 1024) throw new Error('Note exceeds 4 MiB limit.');
       if (current !== null) {
         const backupDir = path.join(this.root, '.slate-history');
         try { if ((await fs.lstat(backupDir)).isSymbolicLink()) throw new Error('History folder cannot be a symbolic link.'); } catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -95,7 +106,7 @@ export class Vault {
         }
         finally { await fs.unlink(temp).catch(() => {}); }
       }
-      return { path: name, revision: hash(content) };
+      return { path: name, revision: hash(content), ...(kind === 'note' ? {content} : {}) };
     };
     const pending = this.queue.then(run); this.queue = pending.catch(() => {}); return pending;
   }
@@ -229,7 +240,7 @@ export class Vault {
     return { bytes, mime };
   }
   async recoveryDirectory(id) {
-    if (typeof id !== 'string' || !/^(rename|trash)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) throw new Error('Invalid recovery identifier.');
+    if (typeof id !== 'string' || !/^(rename|trash|conflict)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) throw new Error('Invalid recovery identifier.');
     let current = this.root;
     for (const segment of ['.slate-recovery', id]) {
       current = path.join(current, segment);
@@ -243,7 +254,7 @@ export class Vault {
     const stat = await fs.lstat(filename);
     if (stat.isSymbolicLink() || !stat.isFile() || stat.size > 2 * 1024 * 1024) throw new Error('Invalid recovery manifest.');
     const value = JSON.parse(await fs.readFile(filename, 'utf8'));
-    if (!value || !['rename','trash'].includes(value.operation) || !id.startsWith(value.operation + '-') || typeof value.created !== 'string' || value.created.length > 100 || !Array.isArray(value.notes) || value.notes.length > 10000) throw new Error('Invalid recovery manifest.');
+    if (!value || !['rename','trash','conflict'].includes(value.operation) || !id.startsWith(value.operation + '-') || typeof value.created !== 'string' || value.created.length > 100 || !Array.isArray(value.notes) || value.notes.length > 10000) throw new Error('Invalid recovery manifest.');
     const paths = new Set();
     for (const note of value.notes) {
       if (!note || typeof note.path !== 'string' || paths.has(note.path) || typeof note.revision !== 'string' || !/^[0-9a-f]{64}$/.test(note.revision) || typeof note.snapshot !== 'string' || !/^\d+\.(md|canvas|excalidraw)$/.test(note.snapshot)) throw new Error('Invalid recovery record.');

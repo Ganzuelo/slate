@@ -50,7 +50,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'PUT' && ['/api/note','/api/rename','/api/trash','/api/folder','/api/attachment','/api/canvas','/api/whiteboard','/api/restore','/api/icons'].includes(url.pathname)) {
         if (req.headers.origin !== origin || req.headers['content-type'] !== 'application/json') return send(403, { error: 'Invalid write request.' });
         const chunks = []; let bytes = 0;
-        const limit = url.pathname === '/api/attachment' ? 24 * 1024 * 1024 : 5 * 1024 * 1024;
+        const limit = (url.pathname === '/api/attachment' ? 24 : url.pathname === '/api/note' ? 10 : 5) * 1024 * 1024;
         for await (const chunk of req) { bytes += chunk.length; if (bytes > limit) { send(413, { error: 'Request too large.' }); return; } chunks.push(chunk); }
         const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if (!data || typeof data !== 'object' || Array.isArray(data)) return send(400, { error: 'Expected an object.' });
@@ -62,7 +62,7 @@ const server = http.createServer(async (req, res) => {
         if (url.pathname === '/api/whiteboard') return send(200, await vault.save(data.path, data.content, data.revision, 'whiteboard'));
         if (url.pathname === '/api/canvas') return send(200, await vault.save(data.path, data.content, data.revision, 'canvas'));
         if (url.pathname === '/api/restore') return send(200, await vault.restore(data.id,data.path,data.expectedRevision));
-        return send(200, await vault.save(data.path, data.content, data.revision));
+        return send(200, await vault.save(data.path, data.content, data.revision, 'note', data.baseContent));
       }
       return send(404, { error: 'Unknown operation.' });
     }

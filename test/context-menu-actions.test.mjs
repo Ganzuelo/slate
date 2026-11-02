@@ -126,8 +126,8 @@ test('bulk close waits for inactive tab loads and cannot resurrect a closed tab'
  assert.equal(run('tabs.length'),0);assert.equal(run('activeTab'),null);
 });
 
-test('bulk close skips pinned tabs and pauses at unsaved drafts without closing later tabs', () => {
- const {run}=setup();run(`tabs[1].pinned=true;drafts.get('A.md').dirty=true;closeMenuTabs(['A.md','B.md']);`);
+test('with autosave disabled, bulk close skips pinned tabs and pauses at unsaved drafts without closing later tabs', () => {
+ const {run}=setup();run(`settings.autoSave=false;tabs[1].pinned=true;drafts.get('A.md').dirty=true;closeMenuTabs(['A.md','B.md']);`);
  assert.equal(run('tabs.length'),2);assert.equal(run("$('switchDialog').open"),true);assert.equal(run('typeof pendingSwitch'),'function');
  run('pendingSwitch=null');assert.equal(run('tabs.length'),2);assert.equal(run("drafts.get('A.md').dirty"),true);
 });
@@ -192,9 +192,9 @@ test('vault switching waits for workspace persistence and stops on a save failur
  assert.equal(opened,false);assert.equal(failed.run("$('message').textContent"),'Workspace could not be saved');
 });
 
-test('dirty notes pause vault switching before any workspace or navigation request', () => {
+test('with autosave disabled, dirty notes pause vault switching before any workspace or navigation request', () => {
  let saved=false;
  const {run}=setup({saveWorkspace:async()=>{saved=true;}});
- run('current.dirty=true;switchWorkspaceVault(async()=>{});');
+ run('settings.autoSave=false;current.dirty=true;switchWorkspaceVault(async()=>{});');
  assert.equal(run("$('switchDialog').open"),true);assert.equal(saved,false);assert.equal(run('typeof pendingSwitch'),'function');
 });
