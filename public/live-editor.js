@@ -96,6 +96,39 @@ class CheckboxWidget extends WidgetType {
   ignoreEvent() { return true; }
 }
 
+class TaskControlsWidget extends WidgetType {
+  constructor(line, raw, icon, onMetadata) { super(); Object.assign(this, {line, raw, icon, onMetadata}); }
+  eq(other) { return this.line === other.line && this.raw === other.raw && this.icon === other.icon && this.onMetadata === other.onMetadata; }
+  toDOM() {
+    const task = window.SlateTasks?.parseTasks([{path: '', content: this.raw}])[0];
+    const span = document.createElement('span'); span.className = 'task-inline-controls'; span.contentEditable = 'false';
+    for (const kind of ['due', 'priority']) {
+      const button = document.createElement('button'); button.type = 'button';
+      const label = kind === 'due' ? (task?.due ? 'Due ' + task.due : 'Assign due date') : 'Urgency: ' + ({highest:'Urgent',normal:'None'}[task?.priority] || task?.priority || 'None');
+      button.setAttribute('aria-label', label); button.dataset.tooltip = label;
+      button.innerHTML = this.icon(kind === 'due' ? 'calendar-days' : 'priority-' + (task?.priority || 'normal'));
+      if (kind === 'priority') { button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-expanded', 'false'); }
+      if (kind === 'due' && task?.due) { const value = document.createElement('span'); value.textContent = task.due; button.append(value); }
+      button.onmousedown = event => event.preventDefault();
+      button.onclick = event => { event.preventDefault(); this.onMetadata(this.line, this.raw, kind, event); };
+      span.append(button);
+    }
+    return span;
+  }
+  ignoreEvent() { return true; }
+}
+
+// Add the description separator in the same undoable typing transaction.
+function taskSpacing(tr) {
+  if (!tr.isUserEvent('input.type') || !tr.docChanged || !tr.newSelection.main.empty || tr.newSelection.ranges.length !== 1) return tr;
+  const pos = tr.newSelection.main.head, line = tr.newDoc.lineAt(pos);
+  if (pos !== line.to || !/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)[ xX]\]$/.test(line.text)) return tr;
+  if (fenceContexts(tr.newDoc).get(line.number)?.code) return tr;
+  let closed = false;
+  tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => { if (toB === pos && inserted.toString().endsWith(']')) closed = true; });
+  return closed ? [tr, {changes:{from:pos,insert:' '},selection:{anchor:pos+1},sequential:true}] : tr;
+}
+
 class ExternalLinkWidget extends WidgetType {
   constructor(icon) { super(); this.icon = icon; }
   eq(other) { return this.icon === other.icon; }
@@ -200,7 +233,7 @@ function enterCodeFence(view) {
   return true;
 }
 
-function liveDecorations(view, fenceState, onToggleTask, icon) {
+function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
   const decorations = [], visited = new Set(), selected = [];
   const queries=taskBlocks(view.state).filter(b=>!view.state.selection.ranges.some(r=>r.from<=b.to&&r.to>=b.from));
   if (view.hasFocus) for (const range of view.state.selection.ranges) selected.push([view.state.doc.lineAt(range.from).number, view.state.doc.lineAt(range.to).number]);
@@ -239,6 +272,16 @@ function liveDecorations(view, fenceState, onToggleTask, icon) {
           const editingMarker = task && view.hasFocus && view.state.selection.ranges.some(range => range.empty ? range.from >= markerFrom && range.from < markerTo : range.from < markerTo && range.to > markerFrom);
           if (task && !editingMarker) decorations.push(Decoration.replace({ widget: new CheckboxWidget(task[2].toLowerCase() === 'x', line.from + task[1].length, line.number, onToggleTask) }).range(markerFrom, markerTo));
           else if (bullet && !active) decorations.push(Decoration.replace({ widget: new BulletWidget() }).range(line.from + bullet[1].length, line.from + bullet[1].length + 1));
+          if (task && icon && onMetadata) {
+            decorations.push(Decoration.widget({widget:new TaskControlsWidget(line.number, text, icon, onMetadata),side:1}).range(line.to));
+            // Source metadata stays editable when the caret enters it.
+            const metadata = /(`+)[\s\S]*?\1|<!--[\s\S]*?(?:-->|$)|(?:📅\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?)/gu;
+            for (const match of text.matchAll(metadata)) {
+              if (match[0].startsWith('`') || match[0].startsWith('<!--')) continue;
+              const from = line.from + match.index, to = from + match[0].length;
+              if (!view.hasFocus || !view.state.selection.ranges.some(r => r.empty ? r.from > from && r.from < to : r.from < to && r.to > from)) hide(from,to);
+            }
+          }
           if (quote) {
             decorations.push(Decoration.line({ class: 'cm-slate-quote-line' }).range(line.from));
             if (!active && !task) hide(line.from, line.from + quote[0].length);
@@ -392,11 +435,11 @@ function queryPreview(options){
   };
   return StateField.define({create:build,update(value,tr){return tr.docChanged||tr.selection||tr.effects.some(e=>e.is(refreshTaskQueries))?build(tr.state):value;},provide:field=>EditorView.decorations.from(field)});
 }
-function createLivePreview(onToggleTask, icon) { return ViewPlugin.fromClass(class {
-  constructor(view) { this.fences = fenceContexts(view.state.doc); this.decorations = liveDecorations(view, this.fences, onToggleTask, icon); }
+function createLivePreview(onToggleTask, icon, onMetadata) { return ViewPlugin.fromClass(class {
+  constructor(view) { this.fences = fenceContexts(view.state.doc); this.decorations = liveDecorations(view, this.fences, onToggleTask, icon, onMetadata); }
   update(update) {
     if (update.docChanged) this.fences = fenceContexts(update.state.doc);
-    if (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged || update.transactions?.some(tr=>tr.effects.some(effect=>effect.is(refreshTaskQueries)))) this.decorations = liveDecorations(update.view, this.fences, onToggleTask, icon);
+    if (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged || update.transactions?.some(tr=>tr.effects.some(effect=>effect.is(refreshTaskQueries)))) this.decorations = liveDecorations(update.view, this.fences, onToggleTask, icon, onMetadata);
   }
 }, { decorations: value => value.decorations }); }
 
@@ -404,7 +447,7 @@ function mount(container, options = {}) {
   if (!(container instanceof HTMLElement)) throw new TypeError('An editor container is required.');
   const previewMode = new Compartment();
   const lineNumberMode = new Compartment(), tabSizeMode = new Compartment(), indentMode = new Compartment(), tabKeyMode = new Compartment();
-  const livePreview = [createLivePreview(options.onToggleTask, options.icon),queryPreview(options),imagePreview(options)];
+  const livePreview = [createLivePreview(options.onToggleTask, options.icon, options.onTaskMetadata),queryPreview(options),imagePreview(options)];
   let mode = 'live', setting = false;
   const nonce = document.querySelector('meta[name="style-nonce"]')?.content || '';
   let view;
@@ -414,6 +457,7 @@ function mount(container, options = {}) {
     return true;
   }
   const extensions = [
+    EditorState.transactionFilter.of(taskSpacing),
     EditorView.lineWrapping, drawSelection(), history(), markdown({ base: markdownLanguage, codeLanguages: codeLanguage }), syntaxHighlighting(slateHighlighter),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown editor', spellcheck: 'true', autocapitalize: 'sentences' }),
     ...(nonce ? [EditorView.cspNonce.of(nonce)] : []),

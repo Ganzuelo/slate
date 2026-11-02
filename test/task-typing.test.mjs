@@ -8,6 +8,27 @@ import { Decoration } from '@codemirror/view';
 // Exercise the editor's actual decoration builder with CodeMirror document and
 // selection state, without needing a native window to render the widgets.
 const source=await fs.readFile(new URL('../public/live-editor.js',import.meta.url),'utf8');
+const spacingContext=vm.createContext({});
+vm.runInContext(source.slice(source.indexOf('function fenceContexts('),source.indexOf('function codeFenceTab('))+source.slice(source.indexOf('function taskSpacing('),source.indexOf('class ExternalLinkWidget')),spacingContext);
+const spacing=EditorState.transactionFilter.of(spacingContext.taskSpacing);
+
+test('closing a newly typed checkbox adds one space and moves the caret in the same transaction',()=>{
+ for(const prefix of ['- [ ', '  * [ ', '1. [ ', '> - [ ']){
+  let state=EditorState.create({doc:prefix,selection:{anchor:prefix.length},extensions:[spacing]});
+  state=state.update({changes:{from:prefix.length,insert:']'},selection:{anchor:prefix.length+1},userEvent:'input.type'}).state;
+  assert.equal(state.doc.toString(),prefix+'] ');
+  assert.equal(state.selection.main.head,prefix.length+2);
+  state=state.update({changes:{from:state.selection.main.head,insert:'Task'},userEvent:'input.type'}).state;
+  assert.equal(state.doc.toString(),prefix+'] Task');
+ }
+});
+
+test('task spacing leaves code examples, pastes, and existing separators unchanged',()=>{
+ for(const [doc,insert,event,expected] of [['```md\n- [ ',']','input.type','```md\n- [ ]'],['','- [ ]','input.paste','- [ ]'],['- [ ','] ','input.type','- [ ] ']]){
+  const state=EditorState.create({doc,extensions:[spacing]}).update({changes:{from:doc.length,insert},selection:{anchor:doc.length+insert.length},userEvent:event}).state;
+  assert.equal(state.doc.toString(),expected);
+ }
+});
 const builder=source.slice(source.indexOf('function liveDecorations('),source.indexOf('function taskBlocks('));
 const context=vm.createContext({Decoration,taskBlocks:()=>[],CheckboxWidget:class CheckboxWidget{constructor(checked,at,line){Object.assign(this,{checked,at,line});}},BulletWidget:class BulletWidget{}});
 vm.runInContext(builder,context);

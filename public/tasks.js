@@ -207,6 +207,31 @@
     if (suffix) line += suffix[0];
     return line;
   }
+  // Change only the requested metadata, preserving prose, code, comments and IDs.
+  function updateMetadata(task, values) {
+    if (!taskPattern.test(task.raw)) throw new Error('Task source line is required.');
+    let line = task.raw;
+    if (Object.hasOwn(values, 'due')) {
+      if (values.due) requireDate(values.due);
+      line = outsideCode(line, part => part.replace(/[ \t]*📅\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}(?![\d-])/gu, ''));
+    }
+    if (Object.hasOwn(values, 'priority')) {
+      if (!priorityOrder.includes(values.priority)) throw new Error('Invalid priority.');
+      line = outsideCode(line, part => part.replace(/[ \t]*(?:🔺|⏫|🔼|🔽|⏬)\uFE0F?/gu, ''));
+    }
+    const additions = [];
+    if (values.due) additions.push('📅 ' + values.due);
+    if (values.priority) {
+      const symbol = Object.keys(priorities).find(key => priorities[key] === values.priority);
+      if (symbol) additions.push(symbol);
+    }
+    let at = line.length;
+    for (const token of line.matchAll(/(`+)[\s\S]*?\1|<!--|[ \t]+\^[\w-]+(?=[ \t]*(?:<!--|$))/g)) {
+      if (!token[0].startsWith('`')) { at = token.index; break; }
+    }
+    const head = line.slice(0, at).trimEnd(), tail = line.slice(at).trimStart();
+    return head + (additions.length ? ' ' + additions.join(' ') : '') + (tail ? ' ' + tail : '') + (!tail && !additions.length && /^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[[^\]]\]$/.test(head) ? ' ' : '');
+  }
   function applyTaskChange(content, task, result) {
     const eol = content.includes('\r\n') ? '\r\n' : '\n', lines = content.split(/\r?\n/);
     if (lines[task.line-1] !== task.raw) throw new Error('This task moved or changed. Refresh and try again.');
@@ -250,5 +275,5 @@
     if (result.nextLine) edits.push({ insertBeforeLine: task.line, text: result.nextLine });
     return edits;
   }
-  root.SlateTasks = Object.freeze({ parseTasks, query, complete, completionEdits, applyTaskChange, editTask, nextOccurrence, today });
+  root.SlateTasks = Object.freeze({ parseTasks, query, complete, completionEdits, applyTaskChange, editTask, updateMetadata, nextOccurrence, today });
 })(globalThis);

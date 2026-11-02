@@ -1,0 +1,73 @@
+// Exercise task typing and metadata controls in a disposable vault.
+const {app,BrowserWindow}=require('electron');
+const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
+const {spawn}=require('node:child_process');
+let server,win;
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+app.whenReady().then(async()=>{
+ try{
+  const vault=await fs.mkdtemp(path.join(os.tmpdir(),'slate-tasks-'));
+  await fs.writeFile(path.join(vault,'Welcome.md'),'# Tasks\n');
+  server=spawn('node',[path.resolve(__dirname,'../server.mjs'),'--vault',vault],{windowsHide:true,stdio:['ignore','pipe','pipe']});
+  const url=await new Promise((resolve,reject)=>{let out='';server.stdout.on('data',data=>{out+=data;const match=out.match(/Open: (http[^\s]+)/);if(match)resolve(match[1]);});server.on('error',reject);});
+  win=new BrowserWindow({show:false,width:1280,height:900,webPreferences:{contextIsolation:true,nodeIntegration:false,backgroundThrottling:false,partition:'task-controls-verification'}});
+  const errors=[];win.webContents.on('console-message',(_event,level,message)=>{if(level===3)errors.push(message);});
+  await win.loadURL(url);
+  win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('Emulation.setFocusEmulationEnabled',{enabled:true});
+  const run=code=>win.webContents.executeJavaScript(code,true);
+  const until=async code=>{for(let i=0;i<80;i++){if(await run(code))return;await pause(50);}throw new Error('Timed out: '+code);};
+  const key=async keyCode=>{win.webContents.sendInputEvent({type:'keyDown',keyCode});win.webContents.sendInputEvent({type:'keyUp',keyCode});await pause(80);};
+  await until('!!current && !!liveEditor');
+  await run("settings.autoSave=false;liveEditor.setValue('');liveEditor.focus();window.taskPickerCalls=0;const nativeShowPicker=HTMLInputElement.prototype.showPicker;HTMLInputElement.prototype.showPicker=function(){window.taskPickerCalls++;return nativeShowPicker.call(this);};void 0");
+  for(const char of '- [ ]')await win.webContents.insertText(char);
+  assert.equal(await run('getText()'),'- [ ] ');assert.equal(await run('liveEditor.getSelection().from'),6);
+  await win.webContents.insertText('Plan release');await pause(80);
+  assert.equal(await run('getText()'),'- [ ] Plan release');
+  assert.equal(await run("document.querySelectorAll('.task-inline-controls button').length"),2);
+  await run("document.querySelector('.task-inline-controls button').click()");
+  assert.equal(await run("!!document.querySelector('.task-date-picker')&&!document.querySelector('.task-date-popover')"),true);
+  assert.equal(await run('window.taskPickerCalls'),1,'calendar opens on the first click');
+  await run("document.querySelector('.task-date-picker').value='2026-11-09';document.querySelector('.task-date-picker').dispatchEvent(new Event('change'))");await pause(100);
+  assert.match(await run('getText()'),/📅 2026-11-09/);
+  await run("document.querySelector('.task-inline-controls button[aria-haspopup]').click()");
+  assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),6);
+  await run("[...document.querySelectorAll('.context-menu button')].find(el=>el.textContent==='High').click()");await pause(100);
+  assert.match(await run('getText()'),/⏫/);
+  assert.equal(await run("!!document.querySelector('.task-inline-controls [data-lucide=priority-high]')"),true);
+  for(const theme of ['dark','light']){
+   await run(`document.documentElement.dataset.theme='${theme}'`);
+   await run("document.querySelector('.task-inline-controls button[aria-haspopup]').focus();document.querySelector('.task-inline-controls button[aria-haspopup]').click()");
+   await pause(150);assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),6);
+   await win.webContents.capturePage();await pause(100);
+   await fs.writeFile(path.resolve(__dirname,`../evidence/task-urgency-${theme}.png`),(await win.webContents.capturePage()).toPNG());
+   await key('Escape');
+   assert.equal(await run("document.activeElement.matches('.task-inline-controls button[aria-haspopup]')"),true);
+   await run("document.querySelector('.task-inline-controls button').click()");await pause(100);
+   assert.equal(await run("!!document.querySelector('.task-date-picker')&&!document.querySelector('.task-date-popover')"),true);
+   await win.webContents.capturePage();await pause(100);
+   await fs.writeFile(path.resolve(__dirname,`../evidence/task-date-${theme}.png`),(await win.webContents.capturePage()).toPNG());
+   await key('Escape');await pause(100);
+   assert.equal(await run("document.activeElement.matches('.task-inline-controls button')"),true);
+  }
+  await run('liveEditor.undo()');await pause(60);assert.ok(!(await run('getText()')).includes('⏫'),'urgency has editor undo');
+  await run('liveEditor.redo()');await pause(60);assert.ok((await run('getText()')).includes('⏫'));
+  await run("document.querySelector('.task-inline-controls button').click()");await pause(100);
+  await run("document.querySelector('.task-date-picker').value='';document.querySelector('.task-date-picker').dispatchEvent(new Event('change'))");
+  assert.ok(!(await run('getText()')).includes('??'),'clearing the native calendar removes the date');
+  await run('liveEditor.undo()');await pause(60);assert.ok((await run('getText()')).includes('📅'));
+  await run("setMode('preview')");assert.equal(await run("$('preview').querySelectorAll('[data-task-property]').length"),2);
+  await run("settings.livePreview=false;setMode('edit');setText('');$('editor').focus()");
+  for(const char of '- [ ]')await win.webContents.insertText(char);
+  assert.equal(await run("$('editor').value"),'- [ ] ');
+  assert.equal(await run("$('editor').selectionStart"),6);
+  await run("document.dispatchEvent(new KeyboardEvent('keydown',{key:'t',ctrlKey:true,bubbles:true,cancelable:true}))");
+  assert.equal(await run("$('taskDialog').open"),true,'Ctrl+T opens New task');
+  assert.equal(await run("document.activeElement.id"),'taskText');
+  await run("$('taskText').value='Captured from shortcut';$('taskForm').requestSubmit()");
+  await until("!$('taskDialog').open");
+  assert.ok((await run('getText()')).includes('Captured from shortcut'),'shortcut dialog creates the task');
+  assert.deepEqual(errors,[]);
+  console.log('PASS: live/source task spacing, direct native calendar and urgency, Ctrl+T task capture, keyboard dismissal/focus, undo/redo, reading controls, dark/light screenshots');
+  server.kill();app.exit(0);
+ }catch(error){console.error(error);server?.kill();app.exit(1);}
+});

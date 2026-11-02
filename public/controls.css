@@ -1,4 +1,13 @@
 /* Shared floating surfaces and compact form controls. */
+.task-inline-controls{display:inline-flex;align-items:center;gap:2px;margin-left:8px;vertical-align:middle;font:12px/1.4 'Segoe UI',sans-serif;user-select:none}
+.task-inline-controls button,.task-property{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:28px;min-height:28px;padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font:inherit}
+.task-inline-controls button:hover,.task-property:hover{background:var(--hover);color:var(--text)}
+.task-inline-controls button:focus-visible,.task-property:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.task-inline-controls .icon,.task-property .icon{width:15px;height:15px;flex:none}
+.task-property.overdue{color:var(--destructive)}
+.context-menu-item[role=menuitemradio][aria-checked=true]{background:var(--active)}
+.task-date-picker{position:fixed;opacity:0;pointer-events:none;margin:0;padding:0;border:0}
+.ui-select-value:has(.icon),.ui-select-option>span:has(.icon){display:flex;align-items:center;gap:8px}.ui-select-value .icon,.ui-select-option>span .icon{width:16px;height:16px;flex:none;color:var(--muted)}
 .ui-tooltip{position:fixed;inset:auto;margin:0;max-width:min(320px,calc(100vw - 16px));padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--secondary);color:var(--text);box-shadow:var(--popover-shadow);font:12px/1.4 'Segoe UI',sans-serif;text-align:center;overflow:visible;overflow-wrap:anywhere;user-select:none;pointer-events:auto;animation:tooltip-in .12s ease-out}
 .ui-tooltip::after{content:"";position:absolute;width:8px;height:8px;background:inherit;transform:translate(-50%,-50%) rotate(45deg);pointer-events:none}
 .ui-tooltip[data-side=top]::after{left:var(--tooltip-arrow-x);top:100%}

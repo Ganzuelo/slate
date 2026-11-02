@@ -63,3 +63,37 @@ test('editing in the active unsaved note retains surrounding text and query resu
  run(`renderTaskQuery($('query'),'not done','- [ ] Live state update')`);
  assert.match(elements.get('query').innerHTML,/Live state update/);
 });
+
+test('quick metadata updates use the active draft and reject stale task lines',async()=>{
+ const {run,elements}=setup();
+ run(String.raw`current={path:'Work.md',type:'note',content:'Before\n- [ ] Draft\nAfter',dirty:true};activeTab='Work.md';drafts.set('Work.md',current);notes=[{path:'Work.md',content:current.content}];$('editor').value=current.content;captured=getTasks()[0];`);
+ await run(`updateTaskMetadata(captured,{due:'2026-11-05',priority:'high'})`);
+ assert.equal(run('current.content'),'Before\n- [ ] Draft 📅 2026-11-05 ⏫\nAfter');
+ await run(`updateTaskMetadata(captured,{priority:'low'})`);
+ assert.match(elements.get('message').textContent,/moved or changed/);
+ assert.equal(run('current.content'),'Before\n- [ ] Draft 📅 2026-11-05 ⏫\nAfter');
+});
+
+test('the New task dialog appends to the active unsaved note without a disk write',async()=>{
+ const {run,elements}=setup();
+ run(`current={path:'Work.md',type:'note',content:'Unsaved prose',dirty:true};activeTab='Work.md';drafts.set('Work.md',current);$('editor').value=current.content;api=()=>{throw new Error('Unexpected disk write');};openTaskDialog();$('taskText').value='Plan release';$('taskDue').value='2026-11-09';$('taskPriority').value='high';`);
+ await run(`createTask({preventDefault(){}})`);
+ assert.equal(run('current.content'),'Unsaved prose\n- [ ] Plan release ⏫ 📅 2026-11-09\n');
+ assert.equal(run('current.dirty'),true);assert.equal(elements.get('taskDialog').open,false);
+ assert.equal(run(`commands().find(c=>c.label==='Create new task').info`),'Ctrl T');
+});
+
+test('quick metadata from the task list persists through Vault and protects edits made while loading',async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'slate-task-metadata-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const vault=new Vault(root);await vault.init();await vault.save('Work.md','Before\r\n- [ ] Review\r\nAfter',null);
+ const {run,context,elements}=setup();
+ context.testApi=async(route,data)=>data?vault.save(data.path,data.content,data.revision):vault.read(new URLSearchParams(route.split('?')[1]).get('path'));
+ context.testRefresh=async()=>{context.testNotes=await vault.list();run('notes=testNotes;');};
+ await run(`api=testApi;refresh=testRefresh;refresh()`);
+ await run(`updateTaskMetadata(getTasks()[0],{due:'2026-11-09',priority:'highest'})`);
+ assert.equal((await vault.read('Work.md')).content,'Before\r\n- [ ] Review 📅 2026-11-09 🔺\r\nAfter');
+ run(`originalApi=api;api=async(...args)=>{const result=await originalApi(...args);drafts.set('Work.md',{dirty:true,content:'New unsaved text'});return result;};`);
+ await run(`updateTaskMetadata(getTasks()[0],{priority:'low'})`);
+ assert.match(elements.get('message').textContent,/unsaved/);
+ assert.equal((await vault.read('Work.md')).content,'Before\r\n- [ ] Review 📅 2026-11-09 🔺\r\nAfter');
+});

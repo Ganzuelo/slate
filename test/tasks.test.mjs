@@ -10,6 +10,24 @@ const plain = value => JSON.parse(JSON.stringify(value));
 const parse = content => plain(engine.parseTasks([{ path: 'Projects/Notes.md', content }]));
 const run = (tasks, query) => plain(engine.query(tasks, query, '2026-10-28'));
 
+test('quick task metadata changes preserve literal code, comments, IDs and other fields',()=>{
+ const raw='  - [/] Review `⏫ 📅 2026-01-01` #work ⏳ 2026-11-03 📅 2026-11-04 ⏫ ^review <!-- keep -->';
+ const task=parse(raw)[0];
+ const edited=engine.updateMetadata(task,{due:'2026-11-05',priority:'highest'});
+ assert.equal(edited,'  - [/] Review `⏫ 📅 2026-01-01` #work ⏳ 2026-11-03 📅 2026-11-05 🔺 ^review <!-- keep -->');
+ assert.equal(parse(edited)[0].priority,'highest');assert.equal(parse(edited)[0].due,'2026-11-05');
+ const cleared=engine.updateMetadata(parse(edited)[0],{due:'',priority:'normal'});
+ assert.ok(cleared.includes('`⏫ 📅 2026-01-01`'));assert.equal(parse(cleared)[0].due,null);assert.equal(parse(cleared)[0].priority,'normal');
+ assert.throws(()=>engine.updateMetadata(task,{due:'2026-02-30'}),/valid date/);
+ assert.throws(()=>engine.updateMetadata(task,{priority:'bad'}),/Invalid priority/);
+});
+
+test('empty tasks accept dates and urgency without a placeholder description',()=>{
+ const task=parse('- [ ] ')[0];
+ assert.equal(engine.updateMetadata(task,{due:'2026-11-05'}),'- [ ] 📅 2026-11-05');
+ assert.equal(engine.updateMetadata(task,{priority:'high'}),'- [ ] ⏫');
+});
+
 test('Tasks parses checkboxes, dates, priority, tags, recurrence and exact source positions', () => {
   const source = '# Work\r\n  - [ ] Send report #work/client ⏫ 🛫 2026-10-26 ⏳ 2026-10-27 📅 2026-10-28 ➕ 2026-10-01 🔁 every week\r\n+ [X] Done ✅ 2026-10-25\r\n1. [/] Working 🔽\r\n> - [ ] Quoted task\r\n';
   const tasks = parse(source);

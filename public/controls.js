@@ -26,12 +26,14 @@
       }
       function sync() {
         value.textContent = select.selectedOptions[0]?.textContent || 'Choose an option'; trigger.disabled = select.disabled;
+        if (select.selectedOptions[0]?.dataset?.icon) value.insertAdjacentHTML('afterbegin', icon(select.selectedOptions[0].dataset.icon));
         list.replaceChildren();
         for (const option of select.options) {
           const row = document.createElement('div'); row.className = 'ui-select-option'; row.tabIndex = -1;
           row.setAttribute('role', 'option'); row.setAttribute('aria-selected', String(option.selected));
           row.setAttribute('aria-disabled', String(option.disabled)); row.dataset.value = option.value;
           const text = document.createElement('span'); text.textContent = option.textContent; row.append(text);
+          if (option.dataset?.icon) text.insertAdjacentHTML('afterbegin', icon(option.dataset.icon));
           row.insertAdjacentHTML('beforeend', icon('check'));
           row.onclick = () => {
             if (option.disabled) return;
