@@ -246,6 +246,7 @@ function liveDecorations(view, fenceState, onToggleTask, icon) {
           const inlineCode = [];
           for (const match of text.matchAll(/`([^`]+)`/g)) {
             const from = line.from + match.index, to = from + match[0].length; inlineCode.push([from, to]);
+            if(globalThis.window?.SlateDataview?.enabled?.()&&/^\$?=/.test(match[1])&&!view.state.selection.ranges.some(r=>r.from<=to&&r.to>=from))continue;
             addMark(from, to, 'cm-slate-inline-code');
             if (!active) { hide(from, from + 1); hide(to - 1, to); }
           }
@@ -292,7 +293,7 @@ function taskBlocks(state) {
     if(!match)continue;
     if(!fence){fence={from:line.from,line:n,char:match[1][0],length:match[1].length,kind:match[2].trim()};continue;}
     if(match[1][0]===fence.char&&match[1].length>=fence.length&&!match[2].trim()){
-      if(fence.kind==='tasks')blocks.push({...fence,to:line.to,end:n,query:state.doc.sliceString(state.doc.line(fence.line).to+1,line.from).trimEnd()});
+      if(fence.kind==='tasks'||globalThis.window?.SlateDataview?.enabled?.()&&/^(dataview|dataviewjs)$/.test(fence.kind))blocks.push({...fence,to:line.to,end:n,query:state.doc.sliceString(state.doc.line(fence.line).to+1,line.from).trimEnd()});
       fence=null;
     }
   }
@@ -305,6 +306,20 @@ class TaskQueryWidget extends WidgetType {
   ignoreEvent(){return true;}
 }
 const refreshTaskQueries=StateEffect.define();
+class DataviewWidget extends WidgetType {
+  constructor(source,kind,from,content,options){super();Object.assign(this,{source,kind,from,content,options});}
+  eq(){return false;}
+  toDOM(view){
+    const inline=this.kind.startsWith('inline'),el=document.createElement(inline?'span':'div');el.className=inline?'dataview-inline':'dataview-query';
+    const result=document.createElement(inline?'span':'div');el.append(result);
+    el.addEventListener('click',event=>this.options.onDataviewClick?.(event));
+    this.options.renderDataview?.(result,this.source,this.kind,this.content,()=>view.requestMeasure());
+    if(!inline){const edit=document.createElement('button');edit.type='button';edit.className='task-query-source';edit.textContent='Edit query';edit.onclick=event=>{event.stopPropagation();view.dispatch({selection:{anchor:this.from},scrollIntoView:true});view.focus();};el.append(edit);}
+    return el;
+  }
+  destroy(dom){const result=dom.firstChild;if(result)result.dataviewRender=null;}
+  ignoreEvent(){return true;}
+}
 // Block decorations belong to a state field, so image height participates in
 // CodeMirror's layout even when the source line is outside the viewport.
 class ImageWidget extends WidgetType {
@@ -356,8 +371,22 @@ function queryPreview(options){
     const ranges=[];
     for(const block of taskBlocks(state)){
       if(state.selection.ranges.some(r=>r.from<=block.to&&r.to>=block.from))continue;
+      if(block.kind!=='tasks'){
+        ranges.push(Decoration.replace({widget:new DataviewWidget(block.query,block.kind,block.from,state.doc.toString(),options),block:true}).range(block.from,block.to));continue;
+      }
       const el=document.createElement('div');options.renderTaskQuery?.(el,block.query,state.doc.toString());
       ranges.push(Decoration.replace({widget:new TaskQueryWidget(el.innerHTML,block.from,options),block:true}).range(block.from,block.to));
+    }
+    if(globalThis.window?.SlateDataview?.enabled?.()){
+      const fences=fenceContexts(state.doc);
+      for(let n=1;n<=state.doc.lines;n++){
+        const line=state.doc.line(n);if(fences.get(n)?.code)continue;
+        for(const match of line.text.matchAll(/(?<!`)(`+)(\$?=\s*[^`]+)\1(?!`)/g)){
+          const from=line.from+match.index,to=from+match[0].length;
+          if(state.selection.ranges.some(r=>r.from<=to&&r.to>=from))continue;
+          const js=match[2].startsWith('$=');ranges.push(Decoration.replace({widget:new DataviewWidget(match[2].slice(js?2:1).trim(),js?'inlinejs':'inline',from,state.doc.toString(),options)}).range(from,to));
+        }
+      }
     }
     return Decoration.set(ranges,true);
   };
@@ -367,7 +396,7 @@ function createLivePreview(onToggleTask, icon) { return ViewPlugin.fromClass(cla
   constructor(view) { this.fences = fenceContexts(view.state.doc); this.decorations = liveDecorations(view, this.fences, onToggleTask, icon); }
   update(update) {
     if (update.docChanged) this.fences = fenceContexts(update.state.doc);
-    if (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged) this.decorations = liveDecorations(update.view, this.fences, onToggleTask, icon);
+    if (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged || update.transactions?.some(tr=>tr.effects.some(effect=>effect.is(refreshTaskQueries)))) this.decorations = liveDecorations(update.view, this.fences, onToggleTask, icon);
   }
 }, { decorations: value => value.decorations }); }
 

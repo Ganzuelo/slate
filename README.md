@@ -57,6 +57,13 @@ A Markdown-first task system compatible with the Obsidian Tasks emoji format.
 
 See [TASKS.md](TASKS.md) for the full syntax.
 
+### Dataview
+- Built-in [Obsidian Dataview](https://github.com/blacksmithgu/obsidian-dataview) DQL engine for tables, lists, tasks, calendar date tables, and inline expressions.
+- Queries read YAML frontmatter, inline fields, tags, links, and file metadata in reading view and live preview.
+- Optional DataviewJS data queries run in isolated workers with read-only note snapshots, network blocking, and time limits.
+
+See [DATAVIEW.md](DATAVIEW.md) for examples and compatibility limits.
+
 ### 🎨 Whiteboards and canvas
 <img src="docs/screenshots/whiteboard.png" alt="Excalidraw whiteboard inside Slate" width="860">
 
@@ -144,6 +151,7 @@ Details: [desktop/README.md](desktop/README.md).
 | `npm run browser` | Run in browser mode |
 | `npm test` / `node --test` | Run the test suite |
 | `npm run build:editor` | Rebuild the CodeMirror editor bundle |
+| `npm run build:dataview` | Rebuild the Dataview worker and license notices |
 | `npm run build:icons` | Rebuild the Lucide icon bundle |
 | `npm run build:whiteboard` | Rebuild the Excalidraw bundle and license notices |
 | `npm run build:app-icon` | Regenerate the app icon PNGs and `.ico` |

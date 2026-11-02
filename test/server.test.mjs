@@ -26,11 +26,14 @@ test('HTTP authentication, origin checks, disk persistence and conflict handling
   const nonce = markup.match(/<meta name="style-nonce" content="([A-Za-z0-9+/=]+)">/)?.[1];
   assert.ok(nonce && nonce.length >= 24); assert.ok(policy.includes(`style-src 'self' 'nonce-${nonce}'`));
   assert.match(policy, /script-src 'self';/); assert.ok(!policy.includes('unsafe-inline'));
-  for (const resource of ['/controls.js', '/controls.css', '/vendor/note-icons.js', '/icon-picker.js', '/note-icons.css', '/appearance.js', '/graph-layout.js', '/graph-view.js']) {
+  for (const resource of ['/controls.js', '/controls.css', '/vendor/note-icons.js', '/icon-picker.js', '/note-icons.css', '/appearance.js', '/graph-layout.js', '/graph-view.js', '/dataview.js', '/dataview.css']) {
     const response = await fetch(origin + resource);
     assert.equal(response.status, 200);
     assert.match(markup, new RegExp(resource.replace('.', '\\.')));
   }
+  const worker=await fetch(origin+'/vendor/dataview-worker.js');assert.equal(worker.status,200);
+  assert.equal(worker.headers.get('content-security-policy'),"default-src 'none'; script-src 'unsafe-eval'; connect-src 'none'; worker-src 'none'");
+  assert.ok(!policy.includes('unsafe-eval'),'the app page keeps its stricter script policy');
   assert.equal((await fetch(origin + '/api/note',{method:'PUT',headers:{...headers,Origin:'https://hostile.example'},body:'{}'})).status,403);
   assert.equal((await fetch(origin + '/api/note',{method:'PUT',headers:{'X-Slate-Token':token},body:'{}'})).status,403);
   const create = await fetch(origin+'/api/note',{method:'PUT',headers,body:JSON.stringify({path:'Nested/Hello.md',content:'# Hello\n\n[[Other]]',revision:null})});

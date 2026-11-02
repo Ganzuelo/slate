@@ -86,6 +86,9 @@ const server = http.createServer(async (req, res) => {
     assets['/graph-layout.js'] = ['graph-layout.js', 'text/javascript'];
     assets['/graph-view.js'] = ['graph-view.js', 'text/javascript'];
     assets['/extras.css'] = ['extras.css', 'text/css'];
+    assets['/dataview.js'] = ['dataview.js', 'text/javascript'];
+    assets['/dataview.css'] = ['dataview.css', 'text/css'];
+    assets['/vendor/dataview-worker.js'] = ['vendor/dataview-worker.js', 'text/javascript'];
     assets['/whiteboard.css'] = ['whiteboard.css', 'text/css'];
     const boardAsset = whiteboardAssets[url.pathname];
     if (boardAsset) {
@@ -96,6 +99,7 @@ const server = http.createServer(async (req, res) => {
     if (!asset) return send(404, { error: 'Not found.' });
     let content = await fs.readFile(path.join(here, 'public', asset[0]), 'utf8');
     if (asset[0] === 'index.html') content = content.replace('</head>', `<meta name="style-nonce" content="${styleNonce}"></head>`);
+    if (asset[0] === 'vendor/dataview-worker.js') headers['Content-Security-Policy'] = "default-src 'none'; script-src 'unsafe-eval'; connect-src 'none'; worker-src 'none'";
     send(200, content, asset[1]);
   } catch (e) { send(e.status || (e.code === 'ENOENT' ? 404 : 400), { error: e.message }); }
 });

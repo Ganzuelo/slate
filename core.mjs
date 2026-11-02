@@ -46,7 +46,7 @@ export class Vault {
     const stat = await fs.stat(file);
     if (stat.size > 4 * 1024 * 1024) throw new Error('Note exceeds 4 MiB limit.');
     const content = await fs.readFile(file, 'utf8');
-    return { path: name, content, revision: hash(content) };
+    return { path: name, content, revision: hash(content), ctime: stat.birthtimeMs, mtime: stat.mtimeMs, size: stat.size };
   }
   async list() {
     const notes = [];

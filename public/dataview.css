@@ -1,0 +1,11 @@
+.dataview-query{margin:12px 0;min-width:0;overflow-wrap:anywhere}
+.dataview-query .task-query-source{display:block;margin-top:8px}
+.dataview-table-wrap{max-width:100%;overflow:auto}
+.dataview-table{border-collapse:collapse;width:100%;font-size:inherit}
+.dataview-table th,.dataview-table td{text-align:start;vertical-align:top;padding:6px 10px;border-bottom:1px solid var(--border)}
+.dataview-table th{font-weight:600}
+.dataview-list{padding-inline-start:24px}
+.dataview-task{display:flex;align-items:baseline;gap:8px;margin:6px 0}
+.dataview-task[aria-checked=true]{color:var(--muted)}
+.dataview-error{color:var(--muted);white-space:pre-wrap}
+.dataview-inline{white-space:normal}

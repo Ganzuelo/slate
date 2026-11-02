@@ -15,6 +15,7 @@
     "browser": "node server.mjs --open",
     "test": "node --test",
     "build:editor": "node scripts/build-editor.mjs",
+    "build:dataview": "node scripts/build-dataview.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "build:app-icon": "electron scripts/build-app-icon.mjs",
     "build:portable": "node scripts/build-portable.mjs",
@@ -46,9 +47,14 @@
     "@excalidraw/excalidraw": "0.18.1",
     "@lezer/highlight": "1.2.5",
     "diff-match-patch": "1.0.5",
+    "emoji-regex": "10.6.0",
     "lucide": "1.64.0",
+    "luxon": "3.7.2",
+    "parsimmon": "1.18.1",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "remove-markdown": "0.6.4",
+    "yaml": "2.8.1"
   },
   "overrides": {
     "nanoid": "^3.3.18",

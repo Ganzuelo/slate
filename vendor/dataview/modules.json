@@ -1,0 +1,23 @@
+[
+  "vendor/dataview/src/api/data-array.ts",
+  "vendor/dataview/src/api/result.ts",
+  "vendor/dataview/src/data-import/common.ts",
+  "vendor/dataview/src/data-import/inline-field.ts",
+  "vendor/dataview/src/data-import/markdown-file.ts",
+  "vendor/dataview/src/data-index/resolver.ts",
+  "vendor/dataview/src/data-index/source.ts",
+  "vendor/dataview/src/data-model/markdown.ts",
+  "vendor/dataview/src/data-model/value.ts",
+  "vendor/dataview/src/expression/binaryop.ts",
+  "vendor/dataview/src/expression/context.ts",
+  "vendor/dataview/src/expression/field.ts",
+  "vendor/dataview/src/expression/functions.ts",
+  "vendor/dataview/src/expression/parse.ts",
+  "vendor/dataview/src/query/engine.ts",
+  "vendor/dataview/src/query/parse.ts",
+  "vendor/dataview/src/query/query.ts",
+  "vendor/dataview/src/settings.ts",
+  "vendor/dataview/src/util/hash.ts",
+  "vendor/dataview/src/util/locale.ts",
+  "vendor/dataview/src/util/normalize.ts"
+]
