@@ -81,6 +81,7 @@ const server = http.createServer(async (req, res) => {
     assets['/controls.css'] = ['controls.css', 'text/css'];
     assets['/wiki-links.js'] = ['wiki-links.js', 'text/javascript'];
     assets['/controls.js'] = ['controls.js', 'text/javascript'];
+    assets['/calendar.js'] = ['calendar.js', 'text/javascript'];
     assets['/tooltips.js'] = ['tooltips.js', 'text/javascript'];
     assets['/ribbon.js'] = ['ribbon.js', 'text/javascript'];
     assets['/graph-layout.js'] = ['graph-layout.js', 'text/javascript'];

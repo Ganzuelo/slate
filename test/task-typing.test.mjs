@@ -29,8 +29,15 @@ test('task spacing leaves code examples, pastes, and existing separators unchang
   assert.equal(state.doc.toString(),expected);
  }
 });
+
+test('closing a checkbox jumps over an existing separator or inserts one before text',()=>{
+ for(const [doc,expected] of [['- [  ','- [ ] '],['- [ \tTask','- [ ]\tTask'],['- [ Task','- [ ] Task']]){
+  const state=EditorState.create({doc,selection:{anchor:4},extensions:[spacing]}).update({changes:{from:4,insert:']'},selection:{anchor:5},userEvent:'input.type'}).state;
+  assert.equal(state.doc.toString(),expected);assert.equal(state.selection.main.head,6);
+ }
+});
 const builder=source.slice(source.indexOf('function liveDecorations('),source.indexOf('function taskBlocks('));
-const context=vm.createContext({Decoration,taskBlocks:()=>[],CheckboxWidget:class CheckboxWidget{constructor(checked,at,line){Object.assign(this,{checked,at,line});}},BulletWidget:class BulletWidget{}});
+const context=vm.createContext({Decoration,taskBlocks:()=>[],CheckboxWidget:class CheckboxWidget{constructor(checked,at,line){Object.assign(this,{checked,at,line});}},BulletWidget:class BulletWidget{},TaskControlsWidget:class TaskControlsWidget{}});
 vm.runInContext(builder,context);
 function checkboxes(state,{focused=true,code=false}={}){
  const fences=new Map(Array.from({length:state.doc.lines},(_,i)=>[i+1,{code,fence:false}]));
@@ -68,5 +75,17 @@ test('empty, checked, indented and numbered tasks render while fenced examples s
   const state=EditorState.create({doc:text,selection:{anchor:text.length}});
   const boxes=checkboxes(state);assert.equal(boxes.length,1,text);assert.equal(boxes[0].checked,text.includes('[x]'));
   assert.equal(checkboxes(state,{code:true}).length,0);
+ }
+});
+
+test('live urgency markers stay hidden for caret mappings and selections while literal code remains visible',()=>{
+ for(const marker of ['🔺','⏫','🔼','🔽','⏬']){
+  const doc='- [ ] **Task** `🔺` '+marker,from=doc.lastIndexOf(marker);
+  for(const selection of [EditorSelection.cursor(from),EditorSelection.cursor(from+1),EditorSelection.range(0,doc.length)]){
+   const state=EditorState.create({doc,selection});
+   const decorations=context.liveDecorations({state,hasFocus:true,visibleRanges:[{from:0,to:doc.length}]},new Map([[1,{code:false}]]),null,()=>'',()=>{});
+   const hidden=[];for(let cursor=decorations.iter();cursor.value;cursor.next())if(cursor.value.spec.taskMetadata)hidden.push([cursor.from,cursor.to]);
+   assert.deepEqual(hidden,[[from,from+marker.length]]);
+  }
  }
 });

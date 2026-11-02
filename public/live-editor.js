@@ -101,7 +101,7 @@ class TaskControlsWidget extends WidgetType {
   eq(other) { return this.line === other.line && this.raw === other.raw && this.icon === other.icon && this.onMetadata === other.onMetadata; }
   toDOM() {
     const task = window.SlateTasks?.parseTasks([{path: '', content: this.raw}])[0];
-    const span = document.createElement('span'); span.className = 'task-inline-controls'; span.contentEditable = 'false';
+    const span = document.createElement('span'); span.className = 'task-inline-controls'; span.contentEditable = 'false'; span.dataset.taskLine = this.line;
     for (const kind of ['due', 'priority']) {
       const button = document.createElement('button'); button.type = 'button';
       const label = kind === 'due' ? (task?.due ? 'Due ' + task.due : 'Assign due date') : 'Urgency: ' + ({highest:'Urgent',normal:'None'}[task?.priority] || task?.priority || 'None');
@@ -122,11 +122,13 @@ class TaskControlsWidget extends WidgetType {
 function taskSpacing(tr) {
   if (!tr.isUserEvent('input.type') || !tr.docChanged || !tr.newSelection.main.empty || tr.newSelection.ranges.length !== 1) return tr;
   const pos = tr.newSelection.main.head, line = tr.newDoc.lineAt(pos);
-  if (pos !== line.to || !/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)[ xX]\]$/.test(line.text)) return tr;
+  if (!/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)[ xX]\]$/.test(tr.newDoc.sliceString(line.from,pos))) return tr;
   if (fenceContexts(tr.newDoc).get(line.number)?.code) return tr;
   let closed = false;
   tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => { if (toB === pos && inserted.toString().endsWith(']')) closed = true; });
-  return closed ? [tr, {changes:{from:pos,insert:' '},selection:{anchor:pos+1},sequential:true}] : tr;
+  if (!closed) return tr;
+  const separator=/^[ \t]/.test(tr.newDoc.sliceString(pos,line.to));
+  return [tr, {...(separator?{}:{changes:{from:pos,insert:' '}}),selection:{anchor:pos+1},sequential:true}];
 }
 
 class ExternalLinkWidget extends WidgetType {
@@ -238,7 +240,7 @@ function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
   const queries=taskBlocks(view.state).filter(b=>!view.state.selection.ranges.some(r=>r.from<=b.to&&r.to>=b.from));
   if (view.hasFocus) for (const range of view.state.selection.ranges) selected.push([view.state.doc.lineAt(range.from).number, view.state.doc.lineAt(range.to).number]);
   const addMark = (from, to, className, attributes) => { if (to > from) decorations.push(Decoration.mark({ class: className, ...(attributes ? { attributes } : {}) }).range(from, to)); };
-  const hide = (from, to) => { if (to > from) decorations.push(Decoration.replace({}).range(from, to)); };
+  const hide = (from, to, taskMetadata = false) => { if (to > from) decorations.push(Decoration.replace(taskMetadata ? {taskMetadata:true} : {}).range(from, to)); };
   for (const visible of view.visibleRanges) {
     let pos = view.state.doc.lineAt(visible.from).from;
     while (pos <= visible.to) {
@@ -274,12 +276,13 @@ function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
           else if (bullet && !active) decorations.push(Decoration.replace({ widget: new BulletWidget() }).range(line.from + bullet[1].length, line.from + bullet[1].length + 1));
           if (task && icon && onMetadata) {
             decorations.push(Decoration.widget({widget:new TaskControlsWidget(line.number, text, icon, onMetadata),side:1}).range(line.to));
-            // Source metadata stays editable when the caret enters it.
+            // Urgency is edited through its Lucide control in live preview.
+            // Keep the stored marker hidden even if a mapped caret enters it.
             const metadata = /(`+)[\s\S]*?\1|<!--[\s\S]*?(?:-->|$)|(?:📅\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?)/gu;
             for (const match of text.matchAll(metadata)) {
               if (match[0].startsWith('`') || match[0].startsWith('<!--')) continue;
               const from = line.from + match.index, to = from + match[0].length;
-              if (!view.hasFocus || !view.state.selection.ranges.some(r => r.empty ? r.from > from && r.from < to : r.from < to && r.to > from)) hide(from,to);
+              if (!match[0].startsWith('📅') || !view.hasFocus || !view.state.selection.ranges.some(r => r.empty ? r.from > from && r.from < to : r.from < to && r.to > from)) hide(from,to,true);
             }
           }
           if (quote) {
@@ -441,7 +444,7 @@ function createLivePreview(onToggleTask, icon, onMetadata) { return ViewPlugin.f
     if (update.docChanged) this.fences = fenceContexts(update.state.doc);
     if (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged || update.transactions?.some(tr=>tr.effects.some(effect=>effect.is(refreshTaskQueries)))) this.decorations = liveDecorations(update.view, this.fences, onToggleTask, icon, onMetadata);
   }
-}, { decorations: value => value.decorations }); }
+}, { decorations: value => value.decorations, provide: plugin => EditorView.atomicRanges.of(view => view.plugin(plugin)?.decorations.update({filter:(_from,_to,value)=>value.spec.taskMetadata===true}) || Decoration.none) }); }
 
 function mount(container, options = {}) {
   if (!(container instanceof HTMLElement)) throw new TypeError('An editor container is required.');
@@ -501,9 +504,9 @@ function mount(container, options = {}) {
       finally { setting = false; }
     },
     focus: () => view.focus(),
-    replaceRange(from, to, text, anchor = from + text.length, head = anchor) {
+    replaceRange(from, to, text, anchor = from + text.length, head = anchor, focus = true) {
       view.dispatch({ changes: { from, to, insert: text }, selection: EditorSelection.range(anchor, head), scrollIntoView: true });
-      view.focus();
+      if (focus) view.focus();
     },
     undo: () => { view.focus(); return undo(view); },
     redo: () => { view.focus(); return redo(view); },

@@ -656,7 +656,10 @@ async function updateTaskMetadata(task, values) {
  try {
   if(current?.path===task.path&&activeTab===task.path){
    const content=getText(),next=window.SlateTasks.applyTaskChange(content,task,{completedLine:window.SlateTasks.updateMetadata(task,values)});
-   replaceEditorText(next);return;
+   replaceEditorText(next,false);
+   const property=Object.hasOwn(values,'priority')?'priority':'due';
+   const control=liveEditor&&settings.livePreview?document.querySelector('#liveEditor .task-inline-controls[data-task-line="'+task.line+'"] button'+(property==='priority'?'[aria-haspopup]':':first-child')):null;
+   control?.focus({preventScroll:true});return;
   }
   if(drafts.get(task.path)?.dirty)throw new Error('Save the unsaved changes in this note first.');
   const note=await api('note?path='+encodeURIComponent(task.path));
@@ -673,34 +676,23 @@ function handleNewTaskShortcut(event){
  if(!event.repeat&&!document.querySelector('dialog[open]'))openTaskDialog();
  return true;
 }
-let closeTaskDatePicker=null;
 function openTaskMetadata(task, kind, event) {
  const trigger=event.currentTarget||event.target,rect=trigger.getBoundingClientRect();
  if(kind==='priority'){
   contextMenus.open(taskUrgencies.map(([value,label])=>({label,icon:'priority-'+value,checked:task.priority===value,action:()=>updateTaskMetadata(task,{priority:value})})),{clientX:rect.left,clientY:rect.bottom,currentTarget:trigger},'Task urgency');return;
  }
- // Anchor the native calendar to the task button without an intermediate form.
- closeTaskDatePicker?.();
- const input=document.createElement('input');input.type='date';input.className='task-date-picker';input.value=task.due||'';input.tabIndex=-1;input.setAttribute('aria-label','Task due date');
- input.style.left=rect.left+'px';input.style.top=rect.top+'px';input.style.width=rect.width+'px';input.style.height=rect.height+'px';
- document.body.append(input);
- const cleanup=()=>{input.remove();document.removeEventListener('pointerdown',dismiss,true);document.removeEventListener('keydown',dismiss,true);closeTaskDatePicker=null;};
- const dismiss=event=>{if(event.type==='pointerdown'||event.key==='Escape'||event.key==='Tab')cleanup();};
- closeTaskDatePicker=cleanup;
- input.onchange=()=>{const due=input.value;cleanup();updateTaskMetadata(task,{due});};
- // Keep focus on the visible trigger so dismissing the calendar returns to it.
- trigger.focus({preventScroll:true});
- document.addEventListener('pointerdown',dismiss,true);document.addEventListener('keydown',dismiss,true);
- try{input.showPicker();}catch(error){cleanup();message(error.message);}
+ window.SlateCalendar.toggle(trigger,{value:task.due||'',onSelect:due=>updateTaskMetadata(task,{due}),icon});
 
 }
 function sourceTaskSpacing(event){
  if(event.inputType!=='insertText'||event.data!==']'||event.isComposing)return;
  const el=event.target,at=el.selectionStart;if(at!==el.selectionEnd)return;
- const next=el.value.slice(0,at)+']'+el.value.slice(at),line=next.slice(0,at+1).split('\n').length;
+ const separator=/[ \t]/.test(el.value.charAt(at))?el.value.charAt(at):' ';
+ const existing=/[ \t]/.test(el.value.charAt(at));
+ const next=el.value.slice(0,at)+']'+separator+el.value.slice(at+(existing?1:0)),line=next.slice(0,at+1).split('\n').length;
  const task=window.SlateTasks?.parseTasks([{path:current?.path||'',content:next}]).find(t=>t.line===line);
- if(!task||!/^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[[ xX]\]$/.test(task.raw))return;
- event.preventDefault();document.execCommand('insertText',false,'] ');
+ if(!task||!/^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[[ xX]\]$/.test(next.slice(next.lastIndexOf('\n',at)+1,at+1)))return;
+ event.preventDefault();if(existing)el.setSelectionRange(at,at+1);document.execCommand('insertText',false,']'+separator);
 }
 function editorTaskMetadata(line, raw, kind, event){
  const task=window.SlateTasks.parseTasks([{path:current?.path||'',content:getText()}]).find(t=>t.line===line&&t.raw===raw);
@@ -734,7 +726,7 @@ async function createTask(e){
   await refresh();$('taskDialog').close();schedulePersist();
  }catch(e){$('taskError').textContent=e.message;}finally{taskBusy=false;$('taskSubmit').disabled=false;}
 }
-function replaceEditorText(next){if(liveEditor&&settings.livePreview){const old=getText(),selection=liveEditor.getSelection();let from=0,end=old.length,nextEnd=next.length;while(from<end&&from<nextEnd&&old[from]===next[from])from++;while(end>from&&nextEnd>from&&old[end-1]===next[nextEnd-1]){end--;nextEnd--;}const map=pos=>pos<=from?pos:pos>=end?pos+nextEnd-end:nextEnd;liveEditor.replaceRange(from,end,next.slice(from,nextEnd),map(selection.from),map(selection.to));}else{const pos=$('editor').selectionStart;setText(next);$('editor').setSelectionRange(Math.min(pos,next.length),Math.min(pos,next.length));draftChanged(next);}}
+function replaceEditorText(next,focus=true){if(liveEditor&&settings.livePreview){const old=getText(),selection=liveEditor.getSelection();let from=0,end=old.length,nextEnd=next.length;while(from<end&&from<nextEnd&&old[from]===next[from])from++;while(end>from&&nextEnd>from&&old[end-1]===next[nextEnd-1]){end--;nextEnd--;}const map=pos=>pos<=from?pos:pos>=end?pos+nextEnd-end:nextEnd;liveEditor.replaceRange(from,end,next.slice(from,nextEnd),map(selection.from),map(selection.to),focus);}else{const pos=$('editor').selectionStart;setText(next);$('editor').setSelectionRange(Math.min(pos,next.length),Math.min(pos,next.length));draftChanged(next);}}
 async function openRecovery(){try{const data=await api('recovery');const host=$('recoveryList');host.replaceChildren();for(const entry of data.entries)for(const file of entry.files){const row=document.createElement('div');row.className='recovery-row';const label=document.createElement('span');label.textContent=file.path+' · '+entry.operation+' · '+new Date(entry.created).toLocaleString();const b=button('View snapshot',async()=>{try{const snapshot=await api('recovery?id='+encodeURIComponent(entry.id)+'&path='+encodeURIComponent(file.path));let expectedRevision=null;try{const existing=await api((fileType(file.path))+'?path='+encodeURIComponent(file.path));expectedRevision=existing.revision;}catch(e){if(notes.some(n=>n.path===file.path)||canvases.some(n=>n.path===file.path)||whiteboards.some(n=>n.path===file.path))throw e;}const preview=document.createElement('pre');preview.textContent=snapshot.content.slice(0,16000);const restore=button(expectedRevision?'Restore over current file':'Restore missing file',async()=>{try{if(drafts.get(file.path)?.dirty)throw new Error('Save or close this file’s unsaved draft before restoring.');await api('restore',{id:entry.id,path:file.path,expectedRevision});drafts.delete(file.path);await refresh();$('recoveryDialog').close();await openNote(file.path,fileType(file.path));message('Snapshot restored.');}catch(e){message(e.message);}});restore.className='primary';row.append(preview,restore);b.disabled=true;}catch(e){message(e.message);}});row.append(label,b);host.append(row);}if(!data.entries.length)empty(host,'No recovery snapshots yet.');$('recoveryDialog').showModal();}catch(e){message(e.message);}}
 function toggleEditorTask(line){if(!current||current.type!=='note'||!window.SlateTasks)return;try{const text=getText();const task=window.SlateTasks.parseTasks([{path:current.path,content:text}]).find(t=>t.line===line);if(!task)throw new Error('Task not found at this line.');const edit=window.SlateTasks.complete(task);const next=window.SlateTasks.applyTaskChange(text,task,edit);replaceEditorText(next);message(edit.warnings?.join(' ')||'');}catch(e){message(e.message);}}
 window.SlateWikiLinks?.mountSource($('editor'),{getNotes:()=>notes,getCurrentPath:()=>current?.path});

@@ -1,4 +1,11 @@
 /* Shared floating surfaces and compact form controls. */
+.ui-calendar{position:fixed;inset:auto;margin:0;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--popover);color:var(--text);box-shadow:var(--popover-shadow);font:13px/1.4 var(--ui-font,'Segoe UI',sans-serif)}
+.ui-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.ui-calendar-header span{font-weight:600}.ui-calendar-header button{width:28px;height:28px;padding:5px}.ui-calendar-header .icon{width:16px;height:16px}
+.ui-calendar button{border:0;border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center}
+.ui-calendar button:hover{background:var(--hover)}.ui-calendar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}.ui-calendar button:disabled{opacity:.35;cursor:default;background:transparent}
+.ui-calendar-grid{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0}.ui-calendar-grid th{height:28px;padding:0;border:0;color:var(--muted);font-size:11px;font-weight:400;text-align:center}.ui-calendar-grid td{padding:1px 0;border:0;text-align:center}
+.ui-calendar .ui-calendar-day{width:32px;max-width:100%;height:32px;padding:0;font-size:12px}.ui-calendar-day.outside{color:var(--faint)}.ui-calendar .ui-calendar-day[aria-current=date]{background:var(--hover);font-weight:600}.ui-calendar .ui-calendar-day.selected{background:var(--active);color:var(--text);font-weight:600}
+.ui-calendar-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);margin-top:10px;padding-top:8px}.ui-calendar-footer button{min-height:28px;padding:4px 8px;font-size:12px}
 .task-inline-controls{display:inline-flex;align-items:center;gap:2px;margin-left:8px;vertical-align:middle;font:12px/1.4 'Segoe UI',sans-serif;user-select:none}
 .task-inline-controls button,.task-property{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:28px;min-height:28px;padding:4px 6px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font:inherit}
 .task-inline-controls button:hover,.task-property:hover{background:var(--hover);color:var(--text)}
@@ -6,7 +13,6 @@
 .task-inline-controls .icon,.task-property .icon{width:15px;height:15px;flex:none}
 .task-property.overdue{color:var(--destructive)}
 .context-menu-item[role=menuitemradio][aria-checked=true]{background:var(--active)}
-.task-date-picker{position:fixed;opacity:0;pointer-events:none;margin:0;padding:0;border:0}
 .ui-select-value:has(.icon),.ui-select-option>span:has(.icon){display:flex;align-items:center;gap:8px}.ui-select-value .icon,.ui-select-option>span .icon{width:16px;height:16px;flex:none;color:var(--muted)}
 .ui-tooltip{position:fixed;inset:auto;margin:0;max-width:min(320px,calc(100vw - 16px));padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--secondary);color:var(--text);box-shadow:var(--popover-shadow);font:12px/1.4 'Segoe UI',sans-serif;text-align:center;overflow:visible;overflow-wrap:anywhere;user-select:none;pointer-events:auto;animation:tooltip-in .12s ease-out}
 .ui-tooltip::after{content:"";position:absolute;width:8px;height:8px;background:inherit;transform:translate(-50%,-50%) rotate(45deg);pointer-events:none}
