@@ -8,11 +8,14 @@ import { launchServer, localOrigin, isExternalHttp } from './server-process.mjs'
 import { resolveVaultItem } from './vault-path.mjs';
 import { readClipboardText, writeClipboardText } from './plain-text-clipboard.mjs';
 import { knownVaults, rememberVault, findKnownVault, forgetVault, transitionVault } from './vault-registry.mjs';
+import { defaultVault } from './default-vault.mjs';
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 app.setName('Slate');
-const userData = path.join(app.getPath('appData'), 'Slate'), legacyUserData = path.join(app.getPath('appData'), 'Lattice Notes');
-if (!existsSync(userData) && existsSync(legacyUserData)) { try { renameSync(legacyUserData, userData); } catch {} }
+const portableDirectory = app.isPackaged && process.env.PORTABLE_EXECUTABLE_DIR;
+const userData = portableDirectory ? path.join(portableDirectory, 'Slate Data') : path.join(app.getPath('appData'), 'Slate');
+const legacyUserData = path.join(app.getPath('appData'), 'Lattice Notes');
+if (!portableDirectory && !existsSync(userData) && existsSync(legacyUserData)) { try { renameSync(legacyUserData, userData); } catch {} }
 app.setPath('userData', userData);
 let window, activeServer, changingVault = false, quitting = false, lastGesture = 0;
 const servers = new Map();
@@ -55,7 +58,7 @@ function senderServer(event) {
   return servers.get(origin);
 }
 async function startVault(vault) {
-  const executable = process.env.SLATE_NODE_EXEC || process.execPath;
+  const executable = (!app.isPackaged && process.env.SLATE_NODE_EXEC) || process.execPath;
   const server = await launchServer({ appRoot, vaultPath: vault, executable, runAsNode: executable === process.execPath });
   servers.set(server.origin, server);
   server.child.once('exit', () => {
@@ -165,11 +168,12 @@ else {
     await fs.mkdir(app.getPath('userData'), { recursive: true });
     const args = process.argv.slice(2), vaultIndex = args.indexOf('--vault');
     const settings = await readJson(settingsFile, {});
-    let vault = vaultIndex >= 0 ? args[vaultIndex + 1] : settings.vault || path.join(appRoot, 'sample-vault');
+    const starterVault = await defaultVault(appRoot, userData, app.isPackaged);
+    let vault = vaultIndex >= 0 ? args[vaultIndex + 1] : settings.vault || starterVault;
     try { activeServer = await startVault(vault); }
     catch (error) {
       if (vaultIndex >= 0) throw error;
-      activeServer = await startVault(path.join(appRoot, 'sample-vault'));
+      activeServer = await startVault(starterVault);
       dialog.showErrorBox('Previous vault unavailable', 'Slate opened the sample vault because the previous folder could not be opened.');
     }
     await writeJson(settingsFile, rememberVault(settings, activeServer.vault));

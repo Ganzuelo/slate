@@ -1,5 +1,17 @@
 # Desktop runtime
 
+## Portable Windows build
+
+`npm run build:portable` builds `dist/Slate-0.1.0-portable-x64.exe` using electron-builder's portable target, plus a `.sha256` checksum. The build never publishes or uploads artifacts. It packages the pinned Electron runtime, application files, starter notes, local assets, and license notices. An explicit staging allowlist includes only the server's `diff-match-patch` runtime dependency; development tools and real vaults are excluded. Application resources are unpacked so the child vault server can use Electron's built-in Node runtime without requiring Node.js on the user's machine.
+
+The portable launcher extracts resources into Windows temporary storage. `PORTABLE_EXECUTABLE_DIR` anchors **`Slate Data` beside the original EXE**, containing the desktop profile, workspace state, and a persistent starter `Vault`. The starter notes are copied only when that vault is first created; relaunches and upgrades do not replace user edits. Move the EXE and `Slate Data` together to retain settings. References to vaults elsewhere remain absolute paths and may need to be reopened on another machine. The containing folder must be writable. Moving just the EXE leaves the data in the old folder.
+
+The current artifact is unsigned and requests ordinary user privileges. Signing requires a publisher certificate before distributing a signed release. The portable target does not install shortcuts, register file associations, or add an uninstaller. Build-tool downloads happen at build time; the packaged app keeps runtime resources local.
+
+After building, run `npm run verify:portable` on Windows. It copies the real EXE into a disposable folder, launches it with a deliberately invalid system-Node override, checks its sidecar vault, creates and saves a note through the app, then restarts and verifies persistence. It uses a temporary DevTools port for automation and removes its test data afterward. You can pass another artifact path to `node scripts/verify-portable.mjs path/to/Slate.exe`.
+
+## Development launch
+
 `npm start` or `Start Slate.cmd` launches Slate in a dedicated Electron window. `npm run browser` keeps the standalone browser mode available.
 
 The launcher looks for Electron under this project's `node_modules/electron` first. This workspace has its own patched Electron 44.10.0 runtime installed, and the project pins that exact version. For development when the local binary is missing, the launcher can fall back to the already installed runtime at `../relay/node_modules/electron`. It reads that runtime's existing `path.txt` without changing Relay or downloading software. This is a development launch arrangement, not a packaged distributable.

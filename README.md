@@ -10,6 +10,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Ganzuelo/slate/releases/download/v0.1.0/Slate-0.1.0-portable-x64.exe"><strong>Download for Windows (x64)</strong></a>
+  · <a href="https://github.com/Ganzuelo/slate/releases/tag/v0.1.0">Release notes and checksum</a>
+</p>
+
+<p align="center">
   <img alt="Node.js 22+" src="https://img.shields.io/badge/node-%3E%3D22-3c873a">
   <img alt="Electron 44" src="https://img.shields.io/badge/electron-44-47848f">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -82,6 +87,18 @@ See [research/WHITEBOARDS.md](research/WHITEBOARDS.md).
 
 ## Getting started
 
+### Windows portable app
+
+Download the [Windows x64 portable EXE](https://github.com/Ganzuelo/slate/releases/download/v0.1.0/Slate-0.1.0-portable-x64.exe) from the [v0.1.0 prerelease](https://github.com/Ganzuelo/slate/releases/tag/v0.1.0), then run it from a writable folder. No installation, administrator access, or separate Node.js runtime is needed. The first launch extracts the bundled runtime into a temporary folder, then opens Slate.
+
+Settings and the starter vault are saved in **`Slate Data` beside the EXE**. Keep that folder with the executable when moving Slate to another computer. Vaults you open elsewhere stay in their original locations. Avoid running two copies against the same vault at once.
+
+This is an early, unsigned Windows x64 build; Windows may display an unknown-publisher warning. The release includes a SHA-256 checksum for verifying your download.
+
+To build the EXE from this repository, follow the source setup below, then run `npm run build:portable`. The executable and a SHA-256 checksum are written to `dist/`.
+
+### Run from source
+
 **Requirements:** [Node.js](https://nodejs.org) 22 or newer. Slate is currently developed and tested on Windows.
 
 ```sh
@@ -130,6 +147,8 @@ Details: [desktop/README.md](desktop/README.md).
 | `npm run build:icons` | Rebuild the Lucide icon bundle |
 | `npm run build:whiteboard` | Rebuild the Excalidraw bundle and license notices |
 | `npm run build:app-icon` | Regenerate the app icon PNGs and `.ico` |
+| `npm run build:portable` | Build the Windows x64 portable EXE and SHA-256 checksum in `dist/` |
+| `npm run verify:portable` | Launch the portable EXE twice with disposable data and verify saving and persistence |
 | `npm run capture:readme` | Re-capture the README hero screenshot from a disposable showcase vault |
 
 Generated bundles in `public/vendor/` are checked in, so a rebuild is only needed after changing their sources or dependencies. UI changes should follow [DESIGN.md](DESIGN.md).

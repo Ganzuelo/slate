@@ -2,6 +2,7 @@
 node_modules/
 .npm-cache/
 npm-debug.log*
+dist/
 
 # Private reverse-engineering notes
 REA-FINDINGS.md

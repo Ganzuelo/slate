@@ -17,11 +17,14 @@
     "build:editor": "node scripts/build-editor.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "build:app-icon": "electron scripts/build-app-icon.mjs",
+    "build:portable": "node scripts/build-portable.mjs",
+    "verify:portable": "node scripts/verify-portable.mjs",
     "build:whiteboard": "node scripts/build-whiteboard.mjs",
     "capture:readme": "electron scripts/capture-readme.cjs"
   },
   "devDependencies": {
     "electron": "44.10.0",
+    "electron-builder": "26.18.0",
     "esbuild": "0.28.2"
   },
   "engines": {
