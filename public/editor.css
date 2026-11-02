@@ -85,3 +85,6 @@
 .slate-editor-host .cm-content:focus,
 .slate-editor-host .cm-content:focus-visible,
 #editor:focus,#editor:focus-visible{outline:none}
+.cm-slate-image{display:block;max-width:100%;padding:8px 0;line-height:0}
+.cm-slate-image.is-unavailable{line-height:1.6;color:var(--muted)}
+.cm-slate-image .note-image,#preview .note-image{display:block;max-width:100%;max-height:none;height:auto;object-fit:contain}

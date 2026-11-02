@@ -5,7 +5,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { html } from '@codemirror/lang-html';
-import { syntaxHighlighting, indentUnit } from '@codemirror/language';
+import { syntaxHighlighting, indentUnit, syntaxTree } from '@codemirror/language';
 import { tags as t, tagHighlighter, highlightCode } from '@lezer/highlight';
 import { autocompletion, acceptCompletion } from '@codemirror/autocomplete';
 import { mergeNote } from '../note-merge.mjs';
@@ -305,6 +305,52 @@ class TaskQueryWidget extends WidgetType {
   ignoreEvent(){return true;}
 }
 const refreshTaskQueries=StateEffect.define();
+// Block decorations belong to a state field, so image height participates in
+// CodeMirror's layout even when the source line is outside the viewport.
+class ImageWidget extends WidgetType {
+  constructor(asset, load) { super(); this.asset=asset; this.load=load; }
+  eq(other) { return this.asset.path===other.asset.path && this.load===other.load; }
+  toDOM(view) {
+    const wrap=document.createElement('span'), img=document.createElement('img');
+    wrap.className='cm-slate-image'; img.className='note-image'; img.alt=this.asset.path;
+    wrap.append(img); let disposed=false; wrap.dispose=()=>{disposed=true;};
+    const failed=()=>{if(!disposed){wrap.classList.add('is-unavailable');wrap.textContent='Image unavailable: '+this.asset.path;view.requestMeasure();}};
+    img.onload=()=>view.requestMeasure();
+    img.onerror=failed;
+    this.load(this.asset).then(url=>{if(!disposed){img.src=url;view.requestMeasure();}},failed);
+    return wrap;
+  }
+  destroy(dom) { dom.dispose?.(); }
+}
+function imageEmbeds(state, options) {
+  const result=[], fences=fenceContexts(state.doc), tree=syntaxTree(state);
+  for(let n=1;n<=state.doc.lines;n++) {
+    const line=state.doc.line(n);if(fences.get(n)?.code)continue;
+    for(const match of line.text.matchAll(/!\[\[([^\]\n]+)\]\]|!\[([^\]\n]*)\]\(([^)\n]+)\)/g)) {
+      const from=line.from+match.index,to=from+match[0].length;
+      let node=tree.resolveInner(from,1), literal=false;
+      for(;node;node=node.parent)if(/^(InlineCode|FencedCode|CodeBlock)$/.test(node.name))literal=true;
+      if(literal)continue;
+      const asset=options.resolveAttachment?.(match[1] ? match[1].split('|')[0] : match[3]);
+      if(!asset?.mime.startsWith('image/'))continue;
+      const standalone=line.text.trim()===match[0];
+      const active=state.selection.ranges.some(r=>r.from<=line.to&&r.to>=line.from);
+      result.push({from,to,line,asset,standalone,active});
+    }
+  }
+  return result;
+}
+function imagePreview(options) {
+  const build=state=>Decoration.set(imageEmbeds(state,options).map(embed=>{
+    const widget=new ImageWidget(embed.asset,options.loadAttachment);
+    return embed.standalone&&!embed.active
+      ? Decoration.replace({widget,block:true}).range(embed.line.from,embed.line.to)
+      : embed.standalone
+        ? Decoration.widget({widget,block:true,side:1}).range(embed.line.to)
+        : Decoration.widget({widget,side:1}).range(embed.to);
+  }),true);
+  return StateField.define({create:build,update(value,tr){return tr.docChanged||tr.selection||tr.effects.some(e=>e.is(refreshTaskQueries))?build(tr.state):value;},provide:field=>EditorView.decorations.from(field)});
+}
 function queryPreview(options){
   const build=state=>{
     const ranges=[];
@@ -329,7 +375,7 @@ function mount(container, options = {}) {
   if (!(container instanceof HTMLElement)) throw new TypeError('An editor container is required.');
   const previewMode = new Compartment();
   const lineNumberMode = new Compartment(), tabSizeMode = new Compartment(), indentMode = new Compartment(), tabKeyMode = new Compartment();
-  const livePreview = [createLivePreview(options.onToggleTask, options.icon),queryPreview(options)];
+  const livePreview = [createLivePreview(options.onToggleTask, options.icon),queryPreview(options),imagePreview(options)];
   let mode = 'live', setting = false;
   const nonce = document.querySelector('meta[name="style-nonce"]')?.content || '';
   let view;
@@ -351,7 +397,7 @@ function mount(container, options = {}) {
     keymap.of([{ key: 'Tab', run: acceptCompletion }]),
     keymap.of([{ key: 'Mod-s', run: () => { options.onSave?.(); return true; } }, {key:'Mod-Enter',run:view=>{options.onToggleTask?.(view.state.doc.lineAt(view.state.selection.main.head).number);return true;}}, { key: 'Mod-b', run: () => wrap('**') }, { key: 'Mod-i', run: () => wrap('*') }, ...defaultKeymap, ...historyKeymap]),
     EditorView.updateListener.of(update => { if (update.docChanged && !setting) options.onChange?.(update.state.doc.toString()); }),
-    EditorView.domEventHandlers({ mousedown(event) {
+    EditorView.domEventHandlers({ drop(event) { return !!event.dataTransfer?.files.length; }, mousedown(event) {
       const target = event.target.closest?.('[data-wiki]');
       if (target && (event.ctrlKey || event.metaKey)) { event.preventDefault(); options.onFollowLink?.(target.getAttribute('data-wiki')); return true; }
       return false;
