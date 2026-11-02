@@ -5,8 +5,8 @@
 <h1 align="center">Slate</h1>
 
 <p align="center">
-  <strong>A local-first Markdown workspace for your notes, tasks, and sketches.</strong><br>
-  Plain files on your disk. No cloud, no telemetry, no plugin runtime.
+  <strong>The corporate-friendly note-taking app.</strong><br>
+  Notes, tasks, and whiteboards. Local files, no cloud account, no telemetry.
 </p>
 
 <p align="center">
@@ -24,7 +24,9 @@
 
 ## Why Slate?
 
-Slate opens a folder of Markdown files (a vault) and gives you a fast, keyboard-friendly desktop editor around it. Everything stays as plain `.md`, `.canvas`, and `.excalidraw` files you own. Slate never phones home, loads remote content, or runs third-party plugin code.
+Work notes belong under your control. Slate brings notes, tasks, and whiteboards together in a local-first desktop app, with no cloud account, telemetry, or third-party plugin runtime. It's built for work environments where keeping data local and limiting external dependencies matter.
+
+Open a folder of Markdown files (a vault) and start writing in a keyboard-friendly editor. Your notes and boards stay as `.md`, `.canvas`, and `.excalidraw` files on your disk, so you can keep using your existing storage and backup tools. Runtime assets are bundled locally, and Slate doesn't download remote content.
 
 ## Features
 
