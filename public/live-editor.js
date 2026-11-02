@@ -1,7 +1,7 @@
-import { EditorState, EditorSelection, Compartment, StateField, StateEffect } from '@codemirror/state';
+import { EditorState, EditorSelection, Compartment, StateField, StateEffect, Prec } from '@codemirror/state';
 import { EditorView, Decoration, ViewPlugin, WidgetType, keymap, drawSelection, lineNumbers } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { markdown, markdownLanguage, insertNewlineContinueMarkupCommand, deleteMarkupBackward } from '@codemirror/lang-markdown';
 import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { html } from '@codemirror/lang-html';
@@ -11,6 +11,18 @@ import { autocompletion, acceptCompletion } from '@codemirror/autocomplete';
 import { mergeNote } from '../note-merge.mjs';
 
 window.SlateNoteMerge = mergeNote;
+
+const continueList = insertNewlineContinueMarkupCommand({ nonTightLists: false });
+// Enter at the end of a task's visible text starts the next task after its
+// hidden due date and urgency markers instead of splitting them off.
+function continueMarkup(view) {
+  const { state } = view, range = state.selection.main;
+  if (state.selection.ranges.length === 1 && range.empty) {
+    const line = state.doc.lineAt(range.head), rest = line.text.slice(range.head - line.from);
+    if (rest && /^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[[^\]]\][ \t]/.test(line.text) && /^(?:[ \t]*(?:[📅✅]\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?))+[ \t]*$/u.test(rest)) view.dispatch({ selection: { anchor: line.to } });
+  }
+  return continueList(view);
+}
 
 // Token classes are colored by theme tokens in editor.css, so links and code
 // stay legible in both light and dark themes. CodeMirror's defaultHighlightStyle
@@ -88,7 +100,9 @@ class CheckboxWidget extends WidgetType {
     input.type = 'checkbox'; input.checked = this.checked; input.className = 'cm-slate-task';
     input.setAttribute('aria-label', this.checked ? 'Mark task incomplete' : 'Complete task');
     input.addEventListener('change', () => {
-      if (this.onToggleTask) { input.checked = this.checked; this.onToggleTask(this.line); }
+      // Ticking a box must not focus the editor at a stale caret, which would
+      // reveal Markdown on that line (such as a heading's #).
+      if (this.onToggleTask) { input.checked = this.checked; this.onToggleTask(this.line, false); }
       else view.dispatch({ changes: { from: this.at, to: this.at + 1, insert: input.checked ? 'x' : ' ' } });
     });
     return input;
@@ -100,36 +114,14 @@ class TaskControlsWidget extends WidgetType {
   constructor(line, raw, icon, onMetadata) { super(); Object.assign(this, {line, raw, icon, onMetadata}); }
   eq(other) { return this.line === other.line && this.raw === other.raw && this.icon === other.icon && this.onMetadata === other.onMetadata; }
   toDOM() {
-    const task = window.SlateTasks?.parseTasks([{path: '', content: this.raw}])[0];
-    const urgency = window.SlateTasks.urgency(task?.priority);
-    const span = document.createElement('span'); span.className = 'task-inline-controls'; span.contentEditable = 'false'; span.dataset.taskLine = this.line;
-    for (const kind of ['due', 'priority']) {
-      const button = document.createElement('button'); button.type = 'button';
-      const label = kind === 'due' ? (task?.due ? 'Due ' + task.due : 'Assign due date') : 'Urgency: ' + urgency.label;
-      button.setAttribute('aria-label', label); button.dataset.tooltip = label;
-      button.innerHTML = this.icon(kind === 'due' ? 'calendar-days' : 'priority-' + urgency.value);
-      if (kind === 'priority') { button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-expanded', 'false'); }
-      if (kind === 'due' && task?.due) { const value = document.createElement('span'); value.textContent = task.due; button.append(value); }
-      button.onmousedown = event => event.preventDefault();
-      button.onclick = event => { event.preventDefault(); this.onMetadata(this.line, this.raw, kind, event); };
-      span.append(button);
-    }
+    const task = window.SlateTasks?.parseTasks([{path: '', content: this.raw}])[0] || {};
+    const span = window.SlateTaskControls.inline(task, this.icon); span.dataset.taskLine = this.line;
+    const button = span.querySelector('.task-menu-button');
+    button.onmousedown = event => event.preventDefault();
+    button.onclick = event => { event.preventDefault(); this.onMetadata(this.line, this.raw, 'menu', event); };
     return span;
   }
   ignoreEvent() { return true; }
-}
-
-// Add the description separator in the same undoable typing transaction.
-function taskSpacing(tr) {
-  if (!tr.isUserEvent('input.type') || !tr.docChanged || !tr.newSelection.main.empty || tr.newSelection.ranges.length !== 1) return tr;
-  const pos = tr.newSelection.main.head, line = tr.newDoc.lineAt(pos);
-  if (!/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)[ xX]\]$/.test(tr.newDoc.sliceString(line.from,pos))) return tr;
-  if (fenceContexts(tr.newDoc).get(line.number)?.code) return tr;
-  let closed = false;
-  tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => { if (toB === pos && inserted.toString().endsWith(']')) closed = true; });
-  if (!closed) return tr;
-  const separator=/^[ \t]/.test(tr.newDoc.sliceString(pos,line.to));
-  return [tr, {...(separator?{}:{changes:{from:pos,insert:' '}}),selection:{anchor:pos+1},sequential:true}];
 }
 
 class ExternalLinkWidget extends WidgetType {
@@ -264,27 +256,35 @@ function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
             if (!active) hide(line.from, line.from + heading[0].length);
             else addMark(line.from, line.from + heading[1].length, 'cm-slate-marker');
           }
-          const task = text.match(/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([^\]])\](?:[ \t]+|$)/);
+          const task = text.match(/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([^\]])\][ \t]/);
           const bullet = text.match(/^(\s*)([-*+])\s/);
           const quote = text.match(/^(\s*>\s?)+/);
-          // Keep the checkbox visible while typing its description, including an
-          // empty task just entered as "- [ ]". Reveal source only when editing
-          // or selecting the marker itself.
+          // As in Obsidian, "- [ ]" becomes a checkbox once the separator space is
+          // typed, and the widget covers only "- [ ]" so that space stays real
+          // text. Reveal source only when editing or selecting the marker itself.
           const markerFrom = line.from + text.match(/^\s*/)[0].length;
-          const markerTo = task ? line.from + task[0].length : markerFrom;
+          const markerTo = task ? line.from + task[1].length + 2 : markerFrom;
           const editingMarker = task && view.hasFocus && view.state.selection.ranges.some(range => range.empty ? range.from >= markerFrom && range.from < markerTo : range.from < markerTo && range.to > markerFrom);
           if (task && !editingMarker) decorations.push(Decoration.replace({ widget: new CheckboxWidget(task[2].toLowerCase() === 'x', line.from + task[1].length, line.number, onToggleTask) }).range(markerFrom, markerTo));
           else if (bullet && !active) decorations.push(Decoration.replace({ widget: new BulletWidget() }).range(line.from + bullet[1].length, line.from + bullet[1].length + 1));
+          if (task && task[2].toLowerCase() === 'x') decorations.push(Decoration.line({ class: 'cm-slate-task-done' }).range(line.from));
           if (task && icon && onMetadata) {
             decorations.push(Decoration.widget({widget:new TaskControlsWidget(line.number, text, icon, onMetadata),side:1}).range(line.to));
-            // Urgency is edited through its Lucide control in live preview.
-            // Keep the stored marker hidden even if a mapped caret enters it.
-            const metadata = /(`+)[\s\S]*?\1|<!--[\s\S]*?(?:-->|$)|(?:📅\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?)/gu;
+            // Due dates and urgency are edited through the task menu, so their
+            // stored markers stay hidden. Each run of markers, with the spaces
+            // before it, is one atomic range the caret cannot land inside.
+            const metadata = /(`+)[\s\S]*?\1|<!--[\s\S]*?(?:-->|$)|[ \t]*(?:[📅✅]\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?)/gu;
+            // A completed task shows its completion date and a check in these chip slots.
+            const done = task[2].toLowerCase() === 'x';
+            let run = null, due = false, urgent = done;
             for (const match of text.matchAll(metadata)) {
               if (match[0].startsWith('`') || match[0].startsWith('<!--')) continue;
-              const from = line.from + match.index, to = from + match[0].length;
-              if (!match[0].startsWith('📅') || !view.hasFocus || !view.state.selection.ranges.some(r => r.empty ? r.from > from && r.from < to : r.from < to && r.to > from)) hide(from,to,true);
+              due ||= /[📅✅]/u.test(match[0]); urgent ||= /[🔺⏫🔼]/u.test(match[0]);
+              const from = Math.max(line.from + match.index, markerTo + 1), to = line.from + match.index + match[0].length;
+              if (run && run[1] === from) run[1] = to; else { if (run) hide(run[0], run[1], true); run = [from, to]; }
             }
+            if (run) hide(run[0], run[1], true);
+            decorations.push(Decoration.line({ class: 'cm-slate-task-line' + (due ? ' has-due' : '') + (urgent ? ' has-urgency' : '') }).range(line.from));
           }
           if (quote) {
             decorations.push(Decoration.line({ class: 'cm-slate-quote-line' }).range(line.from));
@@ -461,8 +461,10 @@ function mount(container, options = {}) {
     return true;
   }
   const extensions = [
-    EditorState.transactionFilter.of(taskSpacing),
-    EditorView.lineWrapping, drawSelection(), history(), markdown({ base: markdownLanguage, codeLanguages: codeLanguage }), syntaxHighlighting(slateHighlighter),
+    EditorView.lineWrapping, drawSelection(), history(), markdown({ base: markdownLanguage, codeLanguages: codeLanguage, addKeymap: false }), syntaxHighlighting(slateHighlighter),
+    // Like Obsidian: Enter continues "- [ ] " with the caret after the space,
+    // and Enter on an empty item ends the list rather than loosening it.
+    Prec.high(keymap.of([{ key: 'Enter', run: continueMarkup }, { key: 'Backspace', run: deleteMarkupBackward }])),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown editor', spellcheck: 'true', autocapitalize: 'sentences' }),
     ...(nonce ? [EditorView.cspNonce.of(nonce)] : []),
     previewMode.of(livePreview),

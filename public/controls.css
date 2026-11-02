@@ -2,6 +2,7 @@
 :root .icon[data-lucide=priority-highest]{color:var(--task-urgent)}
 :root .icon:is([data-lucide=priority-high],[data-lucide=priority-medium]){color:var(--task-high)}
 :root .icon:is([data-lucide=priority-low],[data-lucide=priority-lowest],[data-lucide=priority-normal]){color:var(--task-low)}
+:root .icon[data-lucide=task-done]{color:var(--task-done)}
 .ui-calendar{position:fixed;inset:auto;margin:0;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--popover);color:var(--text);box-shadow:var(--popover-shadow);font:13px/1.4 var(--ui-font,'Segoe UI',sans-serif)}
 .ui-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.ui-calendar-header span{font-weight:600}.ui-calendar-header button{width:28px;height:28px;padding:5px}.ui-calendar-header .icon{width:16px;height:16px}
 .ui-calendar button{border:0;border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center}
@@ -15,6 +16,19 @@
 .task-inline-controls button:focus-visible,.task-property:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .task-inline-controls .icon,.task-property .icon{width:15px;height:15px;flex:none}
 .task-property.overdue{color:var(--destructive)}
+/* Task chips and the options button sit at the right edge, out of the typing path. */
+.slate-editor-host .cm-line.cm-slate-task-line,#preview li.task-item{position:relative;padding-right:40px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-urgency,#preview li.task-item:has([data-chip=urgency]){padding-right:68px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-due,#preview li.task-item:has([data-chip=due]){padding-right:116px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-due.has-urgency,#preview li.task-item:has([data-chip=due]):has([data-chip=urgency]){padding-right:144px}
+/* Completed tasks are crossed out and quieted, matching the Tasks view. */
+.slate-editor-host .cm-line.cm-slate-task-done,#preview li.task-item.done{color:var(--faint);text-decoration:line-through}
+.cm-slate-task-line .task-inline-controls,li.task-item>.task-inline-controls{position:absolute;top:0;right:0;height:1.6em;margin:0;font-size:inherit}
+.task-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 6px;color:var(--muted);font:12px/1 'Segoe UI',sans-serif;white-space:nowrap}
+.task-chip.overdue{color:var(--destructive)}
+.task-chip .icon{width:14px;height:14px;flex:none}
+.task-inline-controls .task-menu-button{min-width:24px;min-height:24px;padding:4px;color:var(--faint)}
+.ui-task-field .ui-select-value.placeholder{color:var(--muted)}
 .context-menu-item[role=menuitemradio][aria-checked=true]{background:var(--active)}
 .ui-select-value:has(.icon),.ui-select-option>span:has(.icon){display:flex;align-items:center;gap:8px}.ui-select-value .icon,.ui-select-option>span .icon{width:16px;height:16px;flex:none;color:var(--muted)}
 .ui-tooltip{position:fixed;inset:auto;margin:0;max-width:min(320px,calc(100vw - 16px));padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--secondary);color:var(--text);box-shadow:var(--popover-shadow);font:12px/1.4 'Segoe UI',sans-serif;text-align:center;overflow:visible;overflow-wrap:anywhere;user-select:none;pointer-events:auto;animation:tooltip-in .12s ease-out}

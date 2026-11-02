@@ -12,14 +12,14 @@
     return year >= 1 && iso(result) === value ? result : null;
   }
   const valid = value => value.getFullYear() >= 1 && value.getFullYear() <= 9999;
-  function toggle(trigger, {value = '', onSelect, icon}) {
+  function toggle(trigger, {value = '', onSelect, icon, label = 'Choose task due date'}) {
     if (active?.trigger === trigger) { active.close(); return; }
     active?.close(false);
     const selected = parse(value), today = new Date(), todayISO = iso(today);
     let focused = selected || date(today.getFullYear(), today.getMonth(), today.getDate());
     let month = date(focused.getFullYear(), focused.getMonth(), 1);
     const panel = document.createElement('div'); panel.className = 'ui-calendar'; panel.popover = 'manual';
-    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Choose task due date');
+    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', label);
     panel.id = 'slate-calendar-' + ++sequence;
     const oldControls = trigger.getAttribute('aria-controls'), oldHasPopup = trigger.getAttribute('aria-haspopup');
     trigger.setAttribute('aria-controls', panel.id); trigger.setAttribute('aria-haspopup', 'dialog'); trigger.setAttribute('aria-expanded', 'true');

@@ -26,7 +26,7 @@ test('HTTP authentication, origin checks, disk persistence and conflict handling
   const nonce = markup.match(/<meta name="style-nonce" content="([A-Za-z0-9+/=]+)">/)?.[1];
   assert.ok(nonce && nonce.length >= 24); assert.ok(policy.includes(`style-src 'self' 'nonce-${nonce}'`));
   assert.match(policy, /script-src 'self';/); assert.ok(!policy.includes('unsafe-inline'));
-  for (const resource of ['/controls.js', '/controls.css', '/calendar.js', '/vendor/note-icons.js', '/icon-picker.js', '/note-icons.css', '/appearance.js', '/graph-layout.js', '/graph-view.js', '/dataview.js', '/dataview.css']) {
+  for (const resource of ['/controls.js', '/controls.css', '/calendar.js', '/task-controls.js', '/vendor/note-icons.js', '/icon-picker.js', '/note-icons.css', '/appearance.js', '/graph-layout.js', '/graph-view.js', '/dataview.js', '/dataview.css']) {
     const response = await fetch(origin + resource);
     assert.equal(response.status, 200);
     assert.match(markup, new RegExp(resource.replace('.', '\\.')));

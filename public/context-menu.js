@@ -60,7 +60,7 @@
         panel.append(button);
       }
       if (panel.lastElementChild?.getAttribute('role') === 'separator') panel.lastElementChild.remove();
-      document.body.append(panel); panels.push(panel); return panel;
+      (opener?.closest?.('dialog[open]') || document.body).append(panel); panels.push(panel); return panel;
     }
     function open(items, event, label = 'Actions', options = {}) {
       event.preventDefault?.(); event.stopPropagation?.(); close(false);
