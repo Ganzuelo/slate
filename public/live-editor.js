@@ -101,12 +101,13 @@ class TaskControlsWidget extends WidgetType {
   eq(other) { return this.line === other.line && this.raw === other.raw && this.icon === other.icon && this.onMetadata === other.onMetadata; }
   toDOM() {
     const task = window.SlateTasks?.parseTasks([{path: '', content: this.raw}])[0];
+    const urgency = window.SlateTasks.urgency(task?.priority);
     const span = document.createElement('span'); span.className = 'task-inline-controls'; span.contentEditable = 'false'; span.dataset.taskLine = this.line;
     for (const kind of ['due', 'priority']) {
       const button = document.createElement('button'); button.type = 'button';
-      const label = kind === 'due' ? (task?.due ? 'Due ' + task.due : 'Assign due date') : 'Urgency: ' + ({highest:'Urgent',normal:'None'}[task?.priority] || task?.priority || 'None');
+      const label = kind === 'due' ? (task?.due ? 'Due ' + task.due : 'Assign due date') : 'Urgency: ' + urgency.label;
       button.setAttribute('aria-label', label); button.dataset.tooltip = label;
-      button.innerHTML = this.icon(kind === 'due' ? 'calendar-days' : 'priority-' + (task?.priority || 'normal'));
+      button.innerHTML = this.icon(kind === 'due' ? 'calendar-days' : 'priority-' + urgency.value);
       if (kind === 'priority') { button.setAttribute('aria-haspopup', 'menu'); button.setAttribute('aria-expanded', 'false'); }
       if (kind === 'due' && task?.due) { const value = document.createElement('span'); value.textContent = task.due; button.append(value); }
       button.onmousedown = event => event.preventDefault();

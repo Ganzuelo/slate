@@ -10,6 +10,14 @@ const plain = value => JSON.parse(JSON.stringify(value));
 const parse = content => plain(engine.parseTasks([{ path: 'Projects/Notes.md', content }]));
 const run = (tasks, query) => plain(engine.query(tasks, query, '2026-10-28'));
 
+test('urgency presents three choices and maps legacy priorities without rewriting Markdown',()=>{
+ assert.deepEqual(plain(engine.urgencies),[{value:'highest',label:'Urgent'},{value:'high',label:'High'},{value:'low',label:'Low'}]);
+ for(const [priority,expected] of [['highest','highest'],['high','high'],['medium','high'],['normal','low'],['low','low'],['lowest','low']])assert.equal(engine.urgency(priority).value,expected);
+ const raw='- [ ] Imported 🔼';const task=parse(raw)[0];
+ assert.equal(task.priority,'medium');assert.equal(engine.urgency(task.priority).label,'High');assert.equal(task.raw,raw);
+ assert.equal(run([task],'priority medium').tasks.length,1);
+});
+
 test('quick task metadata changes preserve literal code, comments, IDs and other fields',()=>{
  const raw='  - [/] Review `⏫ 📅 2026-01-01` #work ⏳ 2026-11-03 📅 2026-11-04 ⏫ ^review <!-- keep -->';
  const task=parse(raw)[0];

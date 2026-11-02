@@ -1,4 +1,7 @@
 /* Shared floating surfaces and compact form controls. */
+:root .icon[data-lucide=priority-highest]{color:var(--task-urgent)}
+:root .icon:is([data-lucide=priority-high],[data-lucide=priority-medium]){color:var(--task-high)}
+:root .icon:is([data-lucide=priority-low],[data-lucide=priority-lowest],[data-lucide=priority-normal]){color:var(--task-low)}
 .ui-calendar{position:fixed;inset:auto;margin:0;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:12px;border:1px solid var(--border);border-radius:6px;background:var(--popover);color:var(--text);box-shadow:var(--popover-shadow);font:13px/1.4 var(--ui-font,'Segoe UI',sans-serif)}
 .ui-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.ui-calendar-header span{font-weight:600}.ui-calendar-header button{width:28px;height:28px;padding:5px}.ui-calendar-header .icon{width:16px;height:16px}
 .ui-calendar button{border:0;border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font:inherit;display:inline-flex;align-items:center;justify-content:center}

@@ -38,14 +38,16 @@ app.whenReady().then(async()=>{
   assert.ok((await run('getText()')).includes(selectedDate),'day selection immediately saves the date');
   assert.equal(await run("document.querySelectorAll('.ui-calendar').length"),0);
   await run("document.querySelector('.task-inline-controls button[aria-haspopup]').click()");
-  assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),6);
+  assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),3);
   await run("[...document.querySelectorAll('.context-menu button')].find(el=>el.textContent==='High').click()");await pause(100);
   assert.match(await run('getText()'),/⏫/);
   assert.equal(await run("!!document.querySelector('.task-inline-controls [data-lucide=priority-high]')"),true);
   for(const theme of ['dark','light']){
    await run(`document.documentElement.dataset.theme='${theme}'`);
    await run("document.querySelector('.task-inline-controls button[aria-haspopup]').focus();document.querySelector('.task-inline-controls button[aria-haspopup]').click()");
-   await pause(150);assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),6);
+   await pause(150);assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),3);
+   assert.deepEqual(await run("[...document.querySelectorAll('.context-menu-label')].map(el=>el.textContent)"),['Urgent','High','Low']);
+   assert.deepEqual(await run("[...document.querySelectorAll('.context-menu-item>.icon:first-child')].map(el=>getComputedStyle(el).color)"),theme==='dark'?['rgb(248, 113, 113)','rgb(251, 191, 36)','rgb(96, 165, 250)']:['rgb(185, 28, 28)','rgb(161, 98, 7)','rgb(29, 78, 216)']);
    await win.webContents.capturePage();await pause(100);
    await fs.writeFile(path.resolve(__dirname,`../evidence/task-urgency-${theme}.png`),(await win.webContents.capturePage()).toPNG());
    await key('Escape');
@@ -71,13 +73,15 @@ app.whenReady().then(async()=>{
   await run("document.dispatchEvent(new KeyboardEvent('keydown',{key:'t',ctrlKey:true,bubbles:true,cancelable:true}))");
   assert.equal(await run("$('taskDialog').open"),true,'Ctrl+T opens New task');
   assert.equal(await run("document.activeElement.id"),'taskText');
+  assert.deepEqual(await run("[...$('taskPriority').options].map(el=>el.textContent)"),['Urgent','High','Low']);
+  assert.equal(await run("$('taskPriority').value"),'low','new tasks default to Low');
   await run("$('taskText').value='Captured from shortcut';$('taskForm').requestSubmit()");
   await until("!$('taskDialog').open");
   assert.ok((await run('getText()')).includes('Captured from shortcut'),'shortcut dialog creates the task');
   await run("settings.livePreview=true;setMode('edit');liveEditor.setValue('- [ ] **Keep formatting** 🔺');liveEditor.setSelection(27);liveEditor.focus()");
   for(const theme of ['dark','light']){
    await run(`document.documentElement.dataset.theme='${theme}'`);
-   for(const [level,label] of [['low','Low'],['highest','Urgent'],['medium','Medium'],['high','High']]){
+   for(const [level,label] of [['low','Low'],['highest','Urgent'],['high','High']]){
    await run("document.querySelector('.task-inline-controls button[aria-haspopup]').click()");
    await run(`[...document.querySelectorAll('.context-menu button')].find(el=>el.textContent==='${label}').click()`);await pause(80);
    assert.equal(await run(`!!document.querySelector('.task-inline-controls [data-lucide=priority-${level}]')`),true);

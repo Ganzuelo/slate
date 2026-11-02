@@ -4,6 +4,9 @@
   const fields = { '📅': 'due', '⏳': 'scheduled', '🛫': 'start', '➕': 'created', '✅': 'done' };
   const priorities = { '🔺': 'highest', '⏫': 'high', '🔼': 'medium', '🔽': 'low', '⏬': 'lowest' };
   const priorityOrder = ['highest', 'high', 'medium', 'normal', 'low', 'lowest'];
+  const urgencies = Object.freeze([{value:'highest',label:'Urgent'}, {value:'high',label:'High'}, {value:'low',label:'Low'}].map(Object.freeze));
+  // Keep imported Markdown priorities queryable; present only Slate's three levels.
+  function urgency(priority) { return urgencies[priority === 'highest' ? 0 : ['high','medium'].includes(priority) ? 1 : 2]; }
   const taskPattern = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([^\]])(\])(?:[ \t]+(.*)|[ \t]*)$/;
   const datesPattern = /(📅|⏳|🛫|➕|✅)\uFE0F?[ \t]*(\d{4}-\d{2}-\d{2})(?![\d-])/gu;
   const dateKeys = ['due', 'scheduled', 'start', 'created', 'done'];
@@ -275,5 +278,5 @@
     if (result.nextLine) edits.push({ insertBeforeLine: task.line, text: result.nextLine });
     return edits;
   }
-  root.SlateTasks = Object.freeze({ parseTasks, query, complete, completionEdits, applyTaskChange, editTask, updateMetadata, nextOccurrence, today });
+  root.SlateTasks = Object.freeze({ parseTasks, query, complete, completionEdits, applyTaskChange, editTask, updateMetadata, urgency, urgencies, nextOccurrence, today });
 })(globalThis);
