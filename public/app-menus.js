@@ -99,6 +99,15 @@ function pathMenu(target) {
 }
 function fileMenuItems(target) {
  const note = Object.freeze({ path: target.path, type: target.type || 'note' });
+ if (note.type === 'file') return [
+  menuItem('Open file', 'file', () => openNote(note.path, note.type)),
+  menuItem('Change icon…', 'image', () => openIconPicker(note.path, note.type)),
+  menuItem(bookmarks.includes(note.path) ? 'Remove bookmark' : 'Bookmark', 'bookmark', () => bookmarkPath(note.path)),
+  menuSeparator,
+  menuItem('Copy internal link', 'link', () => copyMenuText('[[' + note.path + ']]')),
+  pathMenu(note),
+  desktop?.revealPath && menuItem('Show in system explorer', 'folder-open', () => desktop.revealPath(note.path, note.type)),
+ ];
  return [
   menuItem('Open in new tab', 'files', () => openNote(note.path, note.type)),
   menuItem('Change icon…', 'image', () => openIconPicker(note.path, note.type)),

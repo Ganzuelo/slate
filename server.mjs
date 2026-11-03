@@ -44,7 +44,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/attachment') {
         const attachment = await vault.readAttachment(url.searchParams.get('path'));
-        res.writeHead(200, { ...headers, 'Content-Type': attachment.mime, 'Content-Length': attachment.bytes.length, 'Content-Disposition': attachment.mime === 'application/pdf' ? 'attachment; filename="document.pdf"' : 'inline' });
+        const previewable = /^(image|audio|video)\//.test(attachment.mime);
+        const safeName = (url.searchParams.get('path') || 'file').split('/').pop().replace(/["\r\n]/g, '_');
+        res.writeHead(200, { ...headers, 'Content-Type': attachment.mime, 'Content-Length': attachment.bytes.length, 'Content-Disposition': previewable ? 'inline' : `attachment; filename="${safeName}"` });
         return res.end(attachment.bytes);
       }
       if (req.method === 'PUT' && ['/api/note','/api/rename','/api/trash','/api/folder','/api/attachment','/api/canvas','/api/whiteboard','/api/restore','/api/icons'].includes(url.pathname)) {

@@ -104,7 +104,7 @@ async function submitIconPicker(action = 'assign') {
  const selectedName = iconPickerName, selectedColor = iconModel().emoji(iconPickerName) ? '' : iconPickerColor;
  const controls = ['iconApply','iconReset']; controls.forEach(id=>$(id).disabled=true);
  try {
-  if (!(target.kind === 'folder' ? folders.includes(target.path) : allFiles().some(file=>file.path === target.path))) throw new Error('The target moved or was deleted. Refresh and choose it again.');
+  if (!(target.kind === 'folder' ? folders.includes(target.path) : (typeof explorerFiles === 'function' ? explorerFiles() : allFiles()).some(file=>file.path === target.path))) throw new Error('The target moved or was deleted. Refresh and choose it again.');
   await saveIconConfig(config=>{
    if (action === 'reset') delete config.entries[target.path];
    else { config.entries[target.path] = {icon:selectedName,color:selectedColor}; config.recent = [selectedName,...config.recent.filter(name=>name !== selectedName)].slice(0,24); }

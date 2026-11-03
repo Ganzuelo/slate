@@ -7,7 +7,25 @@ import { mergeNote } from './note-merge.mjs';
 
 export const hash = text => createHash('sha256').update(text).digest('hex');
 const conflict = message => Object.assign(new Error(message), { status: 409 });
-const attachmentTypes = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf' };
+// File formats Obsidian recognises (help.obsidian.md Accepted file formats):
+// Markdown, Bases and Canvas are handled as editable vault files elsewhere.
+// Images: avif bmp gif jpeg jpg png webp (svg is excluded: it can carry script)
+// Audio: 3gp flac m4a mp3 oga ogg opus wav webm
+// Video: mkv mov mp4 ogv webm
+// Documents: pdf
+// Slate additionally stores typical office / data documents so they can be
+// kept in the vault, shown in the explorer and downloaded or previewed.
+export const attachmentTypes = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp',
+  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.flac': 'audio/flac', '.3gp': 'audio/3gpp',
+  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska', '.ogv': 'video/ogg', '.webm': 'video/webm',
+  '.pdf': 'application/pdf', '.csv': 'text/csv', '.tsv': 'text/tab-separated-values', '.txt': 'text/plain', '.rtf': 'application/rtf',
+  '.doc': 'application/msword', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint', '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.odt': 'application/vnd.oasis.opendocument.text', '.ods': 'application/vnd.oasis.opendocument.spreadsheet', '.odp': 'application/vnd.oasis.opendocument.presentation',
+  '.epub': 'application/epub+zip', '.zip': 'application/zip', '.json': 'application/json', '.xml': 'application/xml', '.html': 'text/html', '.htm': 'text/html', '.base': 'text/yaml',
+};
 export class Vault {
   constructor(root) { this.root = path.resolve(root); this.queue = Promise.resolve(); }
   async init() {
@@ -307,7 +325,10 @@ function validAttachment(bytes, mime) {
   if (mime === 'image/jpeg') return bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
   if (mime === 'image/gif') return /^GIF8[79]a$/.test(bytes.subarray(0,6).toString());
   if (mime === 'image/webp') return bytes.subarray(0,4).toString() === 'RIFF' && bytes.subarray(8,12).toString() === 'WEBP';
-  return mime === 'application/pdf' && bytes.subarray(0,5).toString() === '%PDF-';
+  if (mime === 'image/avif') return bytes.length >= 12 && bytes.subarray(4,8).toString() === 'ftyp' && ['avif','avis','mif1','mif2','msf1'].includes(bytes.subarray(8,12).toString());
+  if (mime === 'image/bmp') return bytes.subarray(0,2).toString() === 'BM';
+  if (mime === 'application/pdf') return bytes.subarray(0,5).toString() === '%PDF-';
+  return Object.values(attachmentTypes).includes(mime) && bytes.length > 0;
 }
 export function metadata(content, name) {
   const frontmatter = Object.create(null), tags = new Set();

@@ -203,6 +203,21 @@ test('recovery rejects path escapes, tampered snapshots and linked snapshot file
   await assert.rejects(v.recoveryRead(id,'Note.md'),/Invalid recovery snapshot/);
 });
 
+test('document and media attachments persist, are inventoried and read back', async t => {
+  const v = await fixture(t);
+  const csv = await v.attachment('Data/Table.csv', Buffer.from('a,b\n1,2').toString('base64'));
+  assert.equal(csv.mime, 'text/csv'); assert.equal((await v.readAttachment(csv.path)).bytes.toString(), 'a,b\n1,2');
+  const pdf = await v.attachment('Docs/Report.pdf', Buffer.from('%PDF-1.4 hello').toString('base64'));
+  assert.equal(pdf.mime, 'application/pdf');
+  const sheet = await v.attachment('Docs/Book.xlsx', Buffer.from('PK\x03\x04sheet').toString('base64'));
+  assert.equal(sheet.mime, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  const bmp = await v.attachment('Images/Pic.bmp', Buffer.from('BMxxxx').toString('base64'));
+  assert.equal(bmp.mime, 'image/bmp');
+  assert.deepEqual((await v.inventory()).attachments.map(a => a.path), ['Data/Table.csv', 'Docs/Book.xlsx', 'Docs/Report.pdf', 'Images/Pic.bmp']);
+  await assert.rejects(v.attachment('Docs/Fake.pdf', Buffer.from('not a pdf').toString('base64')), /does not match/);
+  await assert.rejects(v.attachment('Docs/Evil.exe', Buffer.from('MZ').toString('base64')));
+  await assert.rejects(v.attachment('Images/False.bmp', Buffer.from('ZZxxxx').toString('base64')), /does not match/);
+});
 test('canvas recovery restores its original file format', async t => {
   const v = await fixture(t), content = JSON.stringify({nodes:[],edges:[]}), original = await v.save('Plan.canvas',content,null,'canvas'), trashed = await v.trash(original.path,original.revision);
   await v.restore(trashed.recoveryPath.split('/')[1],original.path,null);
