@@ -142,10 +142,13 @@ test('preview header matches note headings and has no download or reveal actions
  const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
  const menus = await fs.readFile(new URL('../public/app-menus.js', import.meta.url), 'utf8');
  assert.match(html, /id="fileView" class="note-view file-view"/);
- assert.match(html, /class="document-heading"><h1 class="file-preview-heading"/);
- assert.doesNotMatch(html, /fileDownload|fileReveal|Download a copy/);
- assert.doesNotMatch(app, /downloadAttachment|fileDownload|fileReveal/);
+ assert.match(html, /class="document-heading"><h1 id="filePreviewName"/);
+ assert.doesNotMatch(html, /filePreviewIcon|filePreviewMeta|fileDownload|fileReveal|Download a copy|fileInfo/);
+ assert.doesNotMatch(app, /downloadAttachment|fileDownload|fileReveal|filePreviewIcon|filePreviewMeta|fileInfo/);
  assert.match(menus, /Show in system explorer/);
+ assert.match(html, /id="modeStatus"/);
+ assert.match(app, /\$\('modeStatus'\)\.textContent=\[extensionLabel\(asset\.path\)\|\|'File',formatBytes\(asset\.size\)\]/);
+ assert.doesNotMatch(app, /textContent='File preview'/);
 });
 
 test('frontend attachment list stays in sync with the vault list', async () => {

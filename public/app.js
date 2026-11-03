@@ -345,7 +345,7 @@ async function openAttachmentFile(path,fromHistory=false) {
  current={path,type:'file'};dirty=false;activeTab=path;addTab(path,'file');message();
  if(!fromHistory){historyPaths=historyPaths.slice(0,historyIndex+1);if(historyPaths.at(-1)!==path)historyPaths.push(path);historyIndex=historyPaths.length-1;}
  $('backButton').disabled=historyIndex<=0;$('forwardButton').disabled=historyIndex>=historyPaths.length-1;
- renderBreadcrumb(path);syncBookmarkButton();showView('fileView');$('modeStatus').textContent='File preview';
+ renderBreadcrumb(path);syncBookmarkButton();showView('fileView');$('modeStatus').textContent=[extensionLabel(asset.path)||'File',formatBytes(asset.size)].filter(Boolean).join(' · ');
  renderFiles();renderContext();schedulePersist();
  await renderFilePreview(asset,generation);
 }
@@ -355,9 +355,6 @@ async function renderFilePreview(asset,generation=openGeneration){
  if(filePreviewUrl&&typeof URL!=='undefined'&&URL.revokeObjectURL)URL.revokeObjectURL(filePreviewUrl);
  filePreviewUrl=null;
  $('filePreviewName').textContent=asset.path.split('/').pop();
- $('filePreviewIcon').innerHTML=icon(fileTypeIcon(asset.path,'file'));
- const kindLabel=extensionLabel(asset.path)||'File';
- $('filePreviewMeta').textContent=[kindLabel,formatBytes(asset.size)].filter(Boolean).join(' \u00b7 ')+' \u00b7 In your vault';
  body.replaceChildren();const loading=document.createElement('p');loading.className='file-preview-note';loading.textContent='Loading preview\u2026';body.append(loading);
  try{
   const kind=previewKind(asset.path,asset.mime);
@@ -438,7 +435,7 @@ function revealFolder(path) {
  const row=[...$('files').querySelectorAll('.folder')].find(el=>el.dataset.path===path);if(!row)return;
  row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});row.classList.add('revealed');setTimeout(()=>row.classList.remove('revealed'),1200);
 }
-function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const name of ['noteView','emptyView','graphView','canvasView','tasksView','whiteboardView','fileView'])$(name).hidden=name!==id;for(const name of ['viewModeButton','wordCount','characterCount'])$(name).hidden=id==='whiteboardView'||id==='fileView';if(id==='whiteboardView')$('modeStatus').textContent='Whiteboard';if(id==='fileView')$('modeStatus').textContent='File preview';}
+function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const name of ['noteView','emptyView','graphView','canvasView','tasksView','whiteboardView','fileView'])$(name).hidden=name!==id;for(const name of ['viewModeButton','wordCount','characterCount'])$(name).hidden=id==='whiteboardView'||id==='fileView';if(id==='whiteboardView')$('modeStatus').textContent='Whiteboard';}
 function syncBookmarkButton() {const button=$('bookmarkButton');if(!button)return;const bookmarked=!!current&&bookmarks.includes(current.path);button.classList.toggle('active',bookmarked);button.setAttribute('aria-pressed',String(bookmarked));if(button.dataset)button.dataset.tooltip=bookmarked?'Remove bookmark':'Bookmark note';button.setAttribute('aria-label',bookmarked?'Remove bookmark':'Bookmark note');}
 function afterSafe(action) {if(current?.dirty&&settings.autoSave){save(current).then(saved=>{if(saved)action();});}else if(current?.dirty){pendingSwitch=action;$('switchDialog').showModal();}else action();}
 function closeTab(path,onClosed=()=>{}) {
