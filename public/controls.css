@@ -26,6 +26,11 @@
 .cm-slate-task-line .task-inline-controls,li.task-item>.task-inline-controls{position:absolute;top:0;right:0;height:1.6em;margin:0;font-size:inherit}
 .task-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 6px;color:var(--muted);font:12px/1 'Segoe UI',sans-serif;white-space:nowrap}
 .task-chip.overdue{color:var(--destructive)}
+.task-progress{border-radius:6px;background:var(--active);color:var(--text)}
+.slate-editor-host .cm-line.cm-slate-task-line.has-progress,#preview li.task-item:has([data-chip=progress]){padding-right:150px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-progress.has-urgency,#preview li.task-item:has([data-chip=progress]):has([data-chip=urgency]){padding-right:178px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-progress.has-due,#preview li.task-item:has([data-chip=progress]):has([data-chip=due]){padding-right:226px}
+.slate-editor-host .cm-line.cm-slate-task-line.has-progress.has-due.has-urgency,#preview li.task-item:has([data-chip=progress]):has([data-chip=due]):has([data-chip=urgency]){padding-right:254px}
 .task-chip .icon{width:14px;height:14px;flex:none}
 .task-inline-controls .task-menu-button{min-width:24px;min-height:24px;padding:4px;color:var(--faint)}
 .ui-task-field .ui-select-value.placeholder{color:var(--muted)}

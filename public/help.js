@@ -117,8 +117,9 @@
    { list: [
     'Type `- [ ]` in any note, or press {Ctrl+T} to open the **New task** dialog and choose its note, dates, urgency, and repeat rule.',
     'Click a checkbox, or press {Ctrl+Enter} on a task line, to complete or reopen it. Completion adds today’s date.',
-    'Hover a task to reveal the **Task options** button at the right edge of the line. Use it to set a due date, choose an urgency, or edit the task.',
+    'Hover a task to reveal the **Task options** button at the right edge of the line. Use it to mark a task as in progress or open, set a due date, choose an urgency, or edit the task.',
    ] },
+   'Type `- [/] Task` (or `-[/] Task`) to mark work as in progress. An **In progress** badge appears to the left of the due date, including on undated tasks. Completing the task removes the badge.',
    { h: 'Urgency' },
    { table: [['Urgency', 'Meaning'], ['**Urgent**', 'Red: needs attention now'], ['**High**', 'Amber: important'], ['**Low**', 'Blue: the default']] },
    { h: 'The Tasks view' },

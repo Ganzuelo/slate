@@ -10,6 +10,8 @@ Slate's tasks are Markdown checkboxes in your notes. The Tasks view and fenced `
 - Use **Ctrl+Enter** to complete or reopen the task under the cursor. Editor changes use normal undo and autosave. Changes from another note's query result use revision-checked saves; save any unsaved draft of that source note first.
 - Click a checkbox in reading view or live preview to complete it. Live-preview task query blocks show results when the cursor is outside the block. **Edit query** reveals the Markdown source.
 
+Use `- [/] Task` or `-[/] Task` for work in progress. Its **In progress** badge sits to the left of the due date and also appears without a date. The task options menu can mark an incomplete task as in progress or open. Completing it removes the badge.
+
 ## Dates and priorities
 
 The file format follows Obsidian Tasks' emoji metadata: `📅` due, `⏳` scheduled, `🛫` start, `➕` created, `✅` done; priorities `🔺`, `⏫`, `🔼`, no marker, `🔽`, `⏬`. These are file content; Slate uses local Lucide icons in its controls.

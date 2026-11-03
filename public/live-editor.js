@@ -19,7 +19,7 @@ function continueMarkup(view) {
   const { state } = view, range = state.selection.main;
   if (state.selection.ranges.length === 1 && range.empty) {
     const line = state.doc.lineAt(range.head), rest = line.text.slice(range.head - line.from);
-    if (rest && /^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[[^\]]\][ \t]/.test(line.text) && /^(?:[ \t]*(?:[📅✅]\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?))+[ \t]*$/u.test(rest)) view.dispatch({ selection: { anchor: line.to } });
+    if (rest && /^\s*(?:>\s*)*(?:[-*+]|\d+[.)])[ \t]*\[[^\]]\][ \t]/.test(line.text) && /^(?:[ \t]*(?:[📅✅]\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}|[🔺⏫🔼🔽⏬]\uFE0F?))+[ \t]*$/u.test(rest)) view.dispatch({ selection: { anchor: line.to } });
   }
   return continueList(view);
 }
@@ -256,7 +256,7 @@ function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
             if (!active) hide(line.from, line.from + heading[0].length);
             else addMark(line.from, line.from + heading[1].length, 'cm-slate-marker');
           }
-          const task = text.match(/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([^\]])\][ \t]/);
+          const task = text.match(/^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])[ \t]*\[)([^\]])\][ \t]/);
           const bullet = text.match(/^(\s*)([-*+])\s/);
           const quote = text.match(/^(\s*>\s?)+/);
           // As in Obsidian, "- [ ]" becomes a checkbox once the separator space is
@@ -284,7 +284,7 @@ function liveDecorations(view, fenceState, onToggleTask, icon, onMetadata) {
               if (run && run[1] === from) run[1] = to; else { if (run) hide(run[0], run[1], true); run = [from, to]; }
             }
             if (run) hide(run[0], run[1], true);
-            decorations.push(Decoration.line({ class: 'cm-slate-task-line' + (due ? ' has-due' : '') + (urgent ? ' has-urgency' : '') }).range(line.from));
+            decorations.push(Decoration.line({ class: 'cm-slate-task-line' + (due ? ' has-due' : '') + (urgent ? ' has-urgency' : '') + (task[2] === '/' ? ' has-progress' : '') }).range(line.from));
           }
           if (quote) {
             decorations.push(Decoration.line({ class: 'cm-slate-quote-line' }).range(line.from));

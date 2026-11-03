@@ -34,7 +34,7 @@ app.whenReady().then(async()=>{
   assert.equal(await run("document.querySelectorAll('#liveEditor .task-chip').length"),0,'no chips until values are set');
   assert.equal(await run("(()=>{const line=document.querySelector('#liveEditor .cm-slate-task-line').getBoundingClientRect(),controls=document.querySelector('#liveEditor .task-inline-controls').getBoundingClientRect();return Math.abs(line.right-controls.right)<2&&controls.left>document.querySelector('.cm-cursor').getBoundingClientRect().left+200})()"),true,'controls sit at the right edge, away from the caret');
   await menu();
-  assert.deepEqual(await run("[...document.querySelectorAll('.context-menu-label')].map(el=>el.textContent)"),['Set due date','Urgent','High','Low','Edit task…']);
+  assert.deepEqual(await run("[...document.querySelectorAll('.context-menu-label')].map(el=>el.textContent)"),['Mark as in progress','Set due date','Urgent','High','Low','Edit task…']);
   assert.equal(await run("document.querySelectorAll('.context-menu [role=menuitemradio]').length"),3);
   await choose('Set due date');
   assert.equal(await run("document.querySelectorAll('.ui-calendar:popover-open').length"),1,'the date item opens the calendar');
@@ -182,6 +182,21 @@ app.whenReady().then(async()=>{
   for(const type of ['mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...box,button:'left',clickCount:1});await pause(200);
   assert.match(await run('getText()'),/- \[x\] Task two/,'the click completes the task');
   assert.equal(await run("document.querySelector('#liveEditor .cm-slate-heading').textContent"),'Heading','ticking a task leaves the heading marker hidden');
+  for(const theme of ['dark','light']){
+   await run(`document.documentElement.dataset.theme='${theme}';setMode('edit');setText('-[/] Working 📅 2026-11-14');liveEditor.focus();liveEditor.setSelection(getText().length)`);await pause(100);
+   assert.equal(await run("document.querySelector('#liveEditor [data-chip=progress]').textContent"),'In progress');
+   await win.webContents.capturePage();await pause(150);
+   await fs.writeFile(path.resolve(__dirname,`../evidence/task-progress-${theme}.png`),(await win.webContents.capturePage()).toPNG());
+   assert.equal(await run("(()=>{const p=document.querySelector('#liveEditor [data-chip=progress]').getBoundingClientRect(),d=document.querySelector('#liveEditor [data-chip=due]').getBoundingClientRect();return p.right<=d.left})()"),true,'progress precedes the date');
+   await menu();await choose('Mark as open');assert.match(await run('getText()'),/^-\[ \]/);
+   await menu();await choose('Mark as in progress');assert.match(await run('getText()'),/^-\[\/\]/);
+   await run("setMode('preview')");await pause(80);
+   assert.equal(await run("document.querySelector('#preview [data-chip=progress]').textContent"),'In progress');
+   await run("setMode('edit');setText('- [/] Undated');liveEditor.setSelection(getText().length)");await pause(80);
+   assert.equal(await run("!!document.querySelector('#liveEditor [data-chip=progress]')"),true);
+   await run("toggleEditorTask(1)");await pause(80);
+   assert.equal(await run("!!document.querySelector('#liveEditor [data-chip=progress]')"),false,'completion removes progress');
+  }
   assert.deepEqual(errors,[]);
   console.log('PASS: task typing and Enter continuation, right-edge chips and task options menu, shared calendar and urgency in the task dialog, keyboard dismissal/focus, undo/redo, reading controls, dark/light screenshots');
   server.kill();app.exit(0);

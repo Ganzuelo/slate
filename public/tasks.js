@@ -7,7 +7,7 @@
   const urgencies = Object.freeze([{value:'highest',label:'Urgent'}, {value:'high',label:'High'}, {value:'low',label:'Low'}].map(Object.freeze));
   // Keep imported Markdown priorities queryable; present only Slate's three levels.
   function urgency(priority) { return urgencies[priority === 'highest' ? 0 : ['high','medium'].includes(priority) ? 1 : 2]; }
-  const taskPattern = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)([^\]])(\])(?:[ \t]+(.*)|[ \t]*)$/;
+  const taskPattern = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])[ \t]*\[)([^\]])(\])(?:[ \t]+(.*)|[ \t]*)$/;
   const datesPattern = /(📅|⏳|🛫|➕|✅)\uFE0F?[ \t]*(\d{4}-\d{2}-\d{2})(?![\d-])/gu;
   const dateKeys = ['due', 'scheduled', 'start', 'created', 'done'];
   function today() {
@@ -214,6 +214,10 @@
   function updateMetadata(task, values) {
     if (!taskPattern.test(task.raw)) throw new Error('Task source line is required.');
     let line = task.raw;
+    if (Object.hasOwn(values, 'status')) {
+      if (![' ', '/'].includes(values.status) || task.completed) throw new Error('Only open tasks can change progress.');
+      line = line.replace(taskPattern, (_, prefix, status, closing, text) => prefix + values.status + closing + (text ? ' ' + text : ''));
+    }
     if (Object.hasOwn(values, 'due')) {
       if (values.due) requireDate(values.due);
       line = outsideCode(line, part => part.replace(/[ \t]*📅\uFE0F?[ \t]*\d{4}-\d{2}-\d{2}(?![\d-])/gu, ''));

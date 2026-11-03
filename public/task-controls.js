@@ -18,6 +18,10 @@
   // its due date and urgency.
   function inline(task, icon, data = {}) {
     const root = document.createElement('span'); root.className = 'task-inline-controls'; root.contentEditable = 'false';
+    if (task.status === '/' && !task.completed) {
+      const chip = document.createElement('span'); chip.className = 'task-chip task-progress'; chip.dataset.chip = 'progress';
+      chip.dataset.tooltip = 'In progress'; chip.innerHTML = icon('circle-play'); chip.append('In progress'); root.append(chip);
+    }
     const date = task.completed && task.done ? task.done : task.due;
     if (date) {
       const chip = document.createElement('span'), label = (date === task.done ? 'Completed ' : 'Due ') + formatDate(date);

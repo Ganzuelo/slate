@@ -10,6 +10,18 @@ const plain = value => JSON.parse(JSON.stringify(value));
 const parse = content => plain(engine.parseTasks([{ path: 'Projects/Notes.md', content }]));
 const run = (tasks, query) => plain(engine.query(tasks, query, '2026-10-28'));
 
+test('in-progress markers remain incomplete and preserve metadata through state changes',()=>{
+ for(const prefix of ['- [/]','-[/]','  - [/]','> - [/]','1. [/]']){
+  const raw=prefix+' Working 📅 2026-11-14 ⏫ ^work <!-- keep -->';
+  const task=parse(raw)[0];assert.equal(task.status,'/');assert.equal(task.completed,false);
+  assert.equal(run([task],'not done').tasks.length,1);
+  const open=engine.updateMetadata(task,{status:' '});assert.equal(open,raw.replace('[/]','[ ]'));
+  assert.equal(engine.updateMetadata(parse(open)[0],{status:'/'}),raw);
+  assert.equal(parse(engine.updateMetadata(task,{due:'2026-11-15'}))[0].status,'/');
+  const done=parse(engine.complete(task,'2026-11-03').completedLine)[0];assert.equal(done.completed,true);assert.equal(done.status,'x');
+ }
+});
+
 test('urgency presents three choices and maps legacy priorities without rewriting Markdown',()=>{
  assert.deepEqual(plain(engine.urgencies),[{value:'highest',label:'Urgent'},{value:'high',label:'High'},{value:'low',label:'Low'}]);
  for(const [priority,expected] of [['highest','highest'],['high','high'],['medium','high'],['normal','low'],['low','low'],['lowest','low']])assert.equal(engine.urgency(priority).value,expected);
