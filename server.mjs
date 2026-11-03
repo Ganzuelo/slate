@@ -44,7 +44,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET' && url.pathname === '/api/attachment') {
         const attachment = await vault.readAttachment(url.searchParams.get('path'));
-        const previewable = /^(image|audio|video)\//.test(attachment.mime);
+        const previewable = /^(image|audio|video)\//.test(attachment.mime) || attachment.mime === 'application/pdf';
         const safeName = (url.searchParams.get('path') || 'file').split('/').pop().replace(/["\r\n]/g, '_');
         res.writeHead(200, { ...headers, 'Content-Type': attachment.mime, 'Content-Length': attachment.bytes.length, 'Content-Disposition': previewable ? 'inline' : `attachment; filename="${safeName}"` });
         return res.end(attachment.bytes);
@@ -52,7 +52,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'PUT' && ['/api/note','/api/rename','/api/trash','/api/folder','/api/attachment','/api/canvas','/api/whiteboard','/api/restore','/api/icons'].includes(url.pathname)) {
         if (req.headers.origin !== origin || req.headers['content-type'] !== 'application/json') return send(403, { error: 'Invalid write request.' });
         const chunks = []; let bytes = 0;
-        const limit = (url.pathname === '/api/attachment' ? 24 : url.pathname === '/api/note' ? 10 : 5) * 1024 * 1024;
+        const limit = (url.pathname === '/api/attachment' ? 56 : url.pathname === '/api/note' ? 10 : 5) * 1024 * 1024;
         for await (const chunk of req) { bytes += chunk.length; if (bytes > limit) { send(413, { error: 'Request too large.' }); return; } chunks.push(chunk); }
         const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if (!data || typeof data !== 'object' || Array.isArray(data)) return send(400, { error: 'Expected an object.' });

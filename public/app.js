@@ -1,5 +1,22 @@
 const $ = id => document.getElementById(id);
-const attachmentExtensions = new Set(['.png','.jpg','.jpeg','.gif','.webp','.avif','.bmp','.mp3','.wav','.m4a','.ogg','.oga','.opus','.flac','.3gp','.mp4','.m4v','.mov','.mkv','.ogv','.webm','.pdf','.csv','.tsv','.txt','.rtf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.odt','.ods','.odp','.epub','.zip','.json','.xml','.html','.htm','.base']);
+const attachmentExtensions = new Set(['.png','.jpg','.jpeg','.gif','.webp','.avif','.bmp','.ico','.tif','.tiff','.heic','.heif','.psd','.ai','.eps','.mp3','.wav','.m4a','.ogg','.oga','.opus','.flac','.3gp','.aac','.aiff','.mp4','.m4v','.mov','.mkv','.ogv','.webm','.avi','.wmv','.mpg','.mpeg','.pdf','.csv','.tsv','.txt','.rtf','.doc','.docx','.xls','.xlsx','.ppt','.pptx','.odt','.ods','.odp','.epub','.zip','.7z','.rar','.tar','.gz','.json','.xml','.html','.htm','.base','.pages','.numbers','.key','.js','.mjs','.cjs','.ts','.tsx','.jsx','.css','.scss','.less','.py','.rb','.go','.rs','.java','.c','.h','.cpp','.hpp','.cs','.php','.sh','.yml','.yaml','.toml','.ini','.log','.sql','.vue','.svelte','.lua','.r','.ics','.vcf']);
+const codeExtensions = new Set(['.js','.mjs','.cjs','.ts','.tsx','.jsx','.css','.scss','.less','.py','.rb','.go','.rs','.java','.c','.h','.cpp','.hpp','.cs','.php','.sh','.yml','.yaml','.toml','.json','.xml','.html','.htm','.sql','.vue','.svelte','.lua','.r']);
+const imageExtensions = new Set(['.png','.jpg','.jpeg','.gif','.webp','.avif','.bmp','.ico','.tif','.tiff','.heic','.heif','.psd','.ai','.eps']);
+function fileTypeIcon(path,kind='') {
+ const ext=fileExtension(path);
+ if(kind==='folder')return 'folder';
+ if(kind==='whiteboard'||ext==='.excalidraw')return 'presentation';
+ if(kind==='canvas'||ext==='.canvas')return 'layout';
+ if(imageExtensions.has(ext))return 'image';
+ if(codeExtensions.has(ext))return 'code';
+ if(['.csv','.tsv','.xls','.xlsx','.ods','.numbers'].includes(ext))return 'table';
+ if(['.ppt','.pptx','.odp','.key'].includes(ext))return 'presentation';
+ if(['.mp3','.wav','.m4a','.ogg','.oga','.opus','.flac','.3gp','.aac','.aiff'].includes(ext))return 'music';
+ if(['.mp4','.m4v','.mov','.mkv','.ogv','.webm','.avi','.wmv','.mpg','.mpeg'].includes(ext))return 'video';
+ if(['.zip','.7z','.rar','.tar','.gz'].includes(ext))return 'archive';
+ if(kind==='note'||['.md','.markdown','.txt','.rtf','.doc','.docx','.odt','.pdf','.epub','.base','.pages','.ics','.vcf'].includes(ext))return 'file-text';
+ return 'file';
+}
 function fileExtension(path) { return (/\.[^./]+$/.exec(String(path))?.[0] || '').toLowerCase(); }
 function extensionLabel(path) { const ext = fileExtension(path); return ext && ext !== '.md' ? ext.slice(1).toUpperCase() : ''; }
 function fileType(path) { return /\.excalidraw$/i.test(path) ? 'whiteboard' : /\.canvas$/i.test(path) ? 'canvas' : attachmentExtensions.has(fileExtension(path)) ? 'file' : 'note'; }
@@ -181,7 +198,7 @@ function renderFiles() {
  }
  draw(tree,root);if(window.SlateNoteIcons)hydrateNoteColors(root);if(!root.children.length)empty(root,'No notes yet. Create a new note.');
 }
-function fileButton(note) {const b=button('',()=>requestOpen(note.path,note.type),'file'+(current?.path===note.path?' active':''));const label=note.type==='file'?displayName(note.path):title(note.path);const ext=extensionLabel(note.path);b.innerHTML=(window.SlateNoteIcons?fileIcon(note.path,note.type,note.type==='whiteboard'?'presentation':note.type==='canvas'?'layout':note.type==='file'?'file':''):(note.type==='canvas'?icon('layout'):note.type==='file'?icon('file'):''))+'<span class="file-label">'+esc(label)+'</span>'+(ext?'<span class="file-extension" aria-hidden="true">'+esc(ext)+'</span>':'');b.dataset.tooltip=note.path;b.setAttribute('aria-label',note.path);b.oncontextmenu=e=>showFileMenu(note,e);if(window.SlateNoteIcons)hydrateNoteColors(b);return b;}
+function fileButton(note) {const b=button('',()=>requestOpen(note.path,note.type),'file'+(current?.path===note.path?' active':''));const label=note.type==='file'?displayName(note.path):title(note.path);const ext=extensionLabel(note.path);b.innerHTML=(window.SlateNoteIcons?fileIcon(note.path,note.type,fileTypeIcon(note.path,note.type)):(icon(fileTypeIcon(note.path,note.type))))+'<span class="file-label">'+esc(label)+'</span>'+(ext?'<span class="file-extension" aria-hidden="true">'+esc(ext)+'</span>':'');b.dataset.tooltip=note.path;b.setAttribute('aria-label',note.path);b.oncontextmenu=e=>showFileMenu(note,e);if(window.SlateNoteIcons)hydrateNoteColors(b);return b;}
 // Files dragged in from the desktop are imported into the folder under the pointer: a folder row, a file's parent folder, or the vault root. Existing files are never overwritten.
 const importableTypes={'.md':'note','.markdown':'note','.txt':'note','.canvas':'canvas','.excalidraw':'whiteboard'};
 function fileToBase64(buffer){let binary='';const bytes=buffer instanceof Uint8Array?buffer:new Uint8Array(buffer);for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));if(typeof btoa==='function')return btoa(binary);const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';let out='';for(let i=0;i<binary.length;i+=3){const a=binary.charCodeAt(i),b=i+1<binary.length?binary.charCodeAt(i+1):0,c=i+2<binary.length?binary.charCodeAt(i+2):0;out+=alphabet[a>>2]+alphabet[((a&3)<<4)|(b>>4)]+(i+1<binary.length?alphabet[((b&15)<<2)|(c>>6)]:'=')+(i+2<binary.length?alphabet[c&63]:'=');}return out;}
@@ -198,8 +215,8 @@ async function importDroppedFiles(files,folder) {
   const ext=(/\.[^./]+$/.exec(file.name)?.[0]||'').toLowerCase(),kind=importableTypes[ext]||(attachmentExtensions.has(ext)?'attachment':null);
   if(!kind){unsupported.push(file.name);continue;}
   try{
-   const limit=kind==='attachment'?16*1024*1024:4*1024*1024;
-   if(file.size>limit)throw new Error(kind==='attachment'?'File exceeds 16 MiB.':'File exceeds 4 MiB.');
+   const limit=kind==='attachment'?32*1024*1024:4*1024*1024;
+   if(file.size>limit)throw new Error(kind==='attachment'?'File exceeds 32 MiB.':'File exceeds 4 MiB.');
    if(kind==='attachment'){
     const path=uniqueVaultPath((folder?folder+'/':'')+file.name,taken);
     await api('attachment',{path,base64:fileToBase64(await droppedFileBytes(file))});
@@ -229,8 +246,165 @@ function renderTabs() {
 }
 function addTab(path,type) {if(!tabs.some(t=>t.path===path))tabs.push({path,type});activeTab=path;renderTabs();schedulePersist();}
 function requestOpen(path,type=fileType(path),fromHistory=false) {openNote(path,type,fromHistory).catch(e=>message(e.message));}
-async function openAttachmentFile(path) { const asset=attachments.find(a=>a.path===path)||{path,mime:''}; const url=await loadAttachment(asset); const opened=window.open?.(url,'_blank'); if(!opened){const a=document.createElement('a');a.href=url;a.download=path.split('/').pop();a.click?.();} }
-async function openNote(path,type=fileType(path),fromHistory=false) { if(type==='file'){try{await openAttachmentFile(path);}catch(e){message(e.message);}return;}
+function previewKind(path,mime='') {
+ const ext=fileExtension(path), m=String(mime||'').toLowerCase();
+ if(['.png','.jpg','.jpeg','.gif','.webp','.avif','.bmp','.ico'].includes(ext)||/^image\/(png|jpe?g|gif|webp|avif|bmp|x-icon)$/.test(m))return 'image';
+ if(ext==='.pdf'||m==='application/pdf')return 'pdf';
+ if(m.startsWith('audio/')||['.mp3','.wav','.m4a','.ogg','.oga','.opus','.flac','.3gp','.aac','.aiff'].includes(ext))return 'audio';
+ if(m.startsWith('video/')||['.mp4','.m4v','.mov','.mkv','.ogv','.webm','.avi','.wmv','.mpg','.mpeg'].includes(ext))return 'video';
+ if(['.csv','.tsv'].includes(ext))return 'sheet';
+ if(['.docx','.xlsx','.pptx','.odt','.ods','.odp'].includes(ext))return 'office';
+ if(codeExtensions.has(ext))return 'text';
+ if(['.txt','.rtf','.base','.log','.ini','.ics','.vcf'].includes(ext)||m.startsWith('text/')||m==='application/json'||m==='application/xml'||m==='application/yaml'||m==='application/toml')return 'text';
+ return 'none';
+}
+function formatBytes(n){if(!Number.isFinite(n)||n<0)return '';if(n<1024)return n+' B';if(n<1024*1024)return (n/1024).toFixed(1)+' KB';return (n/(1024*1024)).toFixed(1)+' MB';}
+function parseDelimited(text,delimiter='\t') {
+ const rows=[];let row=[],field='',quoted=false;
+ const src=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+ for(let i=0;i<src.length;i++){const c=src[i];
+  if(quoted){if(c==='"'){if(src[i+1]==='"'){field+='"';i++;}else quoted=false;}else field+=c;}
+  else if(c==='"'&&field==='')quoted=true;
+  else if(c===delimiter){row.push(field);field='';}
+  else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';}
+  else field+=c;
+ }
+ row.push(field);rows.push(row);
+ while(rows.length&&rows.at(-1).every(v=>v===''))rows.pop();
+ return rows;
+}
+function xmlEntities(s){return String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCharCode(parseInt(n,16))).replace(/&amp;/g,'&');}
+function xmlTexts(xml,tag){return [...String(xml).matchAll(new RegExp('<(?:\\w+:)?'+tag+'(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?'+tag+'>','g'))].map(m=>xmlEntities(m[1].replace(/<[^>]+>/g,'')));}
+async function inflateRaw(bytes){
+ if(typeof DecompressionStream==='undefined')throw new Error('This file preview is not available in this browser.');
+ const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+ return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function unzipTexts(bytes){
+ const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ let eocd=-1;for(let i=bytes.length-22;i>=0&&i>=bytes.length-22-65536;i--){if(view.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+ if(eocd<0)throw new Error('Not a ZIP-based document.');
+ const count=view.getUint16(eocd+10,true);let at=view.getUint32(eocd+16,true);const files=new Map();
+ const decoder=typeof TextDecoder!=='undefined'?new TextDecoder():null;
+ const decode=b=>decoder?decoder.decode(b):[...b].map(c=>String.fromCharCode(c)).join('');
+ for(let n=0;n<count&&at+46<=bytes.length;n++){
+  if(view.getUint32(at,true)!==0x02014b50)break;
+  const method=view.getUint16(at+10,true),size=view.getUint32(at+20,true),nameLen=view.getUint16(at+28,true),extraLen=view.getUint16(at+30,true),commentLen=view.getUint16(at+32,true),local=view.getUint32(at+42,true);
+  const name=decode(bytes.subarray(at+46,at+46+nameLen));at+=46+nameLen+extraLen+commentLen;
+  if(local+30>bytes.length||view.getUint32(local,true)!==0x04034b50)continue;
+  const start=local+30+view.getUint16(local+26,true)+view.getUint16(local+28,true);
+  const data=bytes.subarray(start,start+size);
+  try{files.set(name,method===0?data:method===8?await inflateRaw(data):null);}catch{files.set(name,null);}
+ }
+ return files;
+}
+async function officePreview(path,bytes){
+ const files=await unzipTexts(bytes);const ext=fileExtension(path);
+ const text=name=>{const b=files.get(name);if(!b)return '';return (typeof TextDecoder!=='undefined'?new TextDecoder():null)?.decode(b)??[...b].map(c=>String.fromCharCode(c)).join('');};
+ if(ext==='.docx'){
+  const xml=text('word/document.xml');
+  const paragraphs=[...xml.matchAll(/<w:p(?:\s[^>]*)?>([\s\S]*?)<\/w:p>/g)].map(m=>xmlTexts(m[1],'t').join(''));
+  return {kind:'text',text:paragraphs.filter(Boolean).join('\n')||xmlTexts(xml,'t').join(' ')};
+ }
+ if(ext==='.xlsx'){
+  const shared=xmlTexts(text('xl/sharedStrings.xml'),'si').map(s=>s);
+  // sharedStrings <si> may hold several <t>; re-extract per item
+  const sharedItems=[...text('xl/sharedStrings.xml').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m=>xmlTexts(m[1],'t').join(''));
+  const rows=[];
+  for(const name of [...files.keys()].filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()){
+   for(const rowMatch of text(name).matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)){
+    const cells=[];
+    for(const cell of rowMatch[1].matchAll(/<c([^>]*)>([\s\S]*?)<\/c>/g)){
+     const sharedCell=/\bt="s"/.test(cell[1]);const value=cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1]??xmlTexts(cell[2],'t').join('');
+     cells.push(sharedCell?(sharedItems[Number(value)]??''):xmlEntities(value));
+    }
+    rows.push(cells);
+   }
+  }
+  return {kind:'sheet',rows};
+ }
+ if(ext==='.pptx'){
+  const slides=[...files.keys()].filter(k=>/^ppt\/slides\/slide\d+\.xml$/.test(k)).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const out=slides.map((name,i)=>'Slide '+(i+1)+'\n'+xmlTexts(text(name),'t').join('\n')).join('\n\n');
+  return {kind:'text',text:out};
+ }
+ const xml=text('content.xml');
+ const paras=[...xml.matchAll(/<(?:text|office):p(?:\s[^>]*)?>([\s\S]*?)<\/(?:text|office):p>/g)].map(m=>xmlEntities(m[1].replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim()).filter(Boolean);
+ return {kind:'text',text:paras.join('\n')||xmlEntities(xml.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim()};
+}
+async function fetchAttachmentBlob(asset){
+ const r=await fetch('/api/attachment?path='+encodeURIComponent(asset.path),{headers:{'X-Slate-Token':token}});
+ if(!r.ok)throw new Error('Attachment could not be loaded.');
+ return r.blob();
+}
+let filePreviewGeneration=0, filePreviewUrl=null;
+async function openAttachmentFile(path,fromHistory=false) {
+ const generation=++openGeneration;
+ if(current?.dirty&&settings.autoSave)save(current);
+ const asset=attachments.find(a=>a.path===path)||{path,mime:''};
+ current={path,type:'file'};dirty=false;activeTab=path;addTab(path,'file');message();
+ if(!fromHistory){historyPaths=historyPaths.slice(0,historyIndex+1);if(historyPaths.at(-1)!==path)historyPaths.push(path);historyIndex=historyPaths.length-1;}
+ $('backButton').disabled=historyIndex<=0;$('forwardButton').disabled=historyIndex>=historyPaths.length-1;
+ renderBreadcrumb(path);syncBookmarkButton();showView('fileView');$('modeStatus').textContent='File preview';
+ renderFiles();renderContext();schedulePersist();
+ await renderFilePreview(asset,generation);
+}
+async function renderFilePreview(asset,generation=openGeneration){
+ const body=$('filePreviewBody');if(!body)return;
+ const my=++filePreviewGeneration;
+ if(filePreviewUrl&&typeof URL!=='undefined'&&URL.revokeObjectURL)URL.revokeObjectURL(filePreviewUrl);
+ filePreviewUrl=null;
+ $('filePreviewName').textContent=asset.path.split('/').pop();
+ $('filePreviewIcon').innerHTML=icon(fileTypeIcon(asset.path,'file'));
+ const kindLabel=extensionLabel(asset.path)||'File';
+ $('filePreviewMeta').textContent=[kindLabel,formatBytes(asset.size)].filter(Boolean).join(' \u00b7 ')+' \u00b7 In your vault';
+ body.replaceChildren();const loading=document.createElement('p');loading.className='file-preview-note';loading.textContent='Loading preview\u2026';body.append(loading);
+ try{
+  const kind=previewKind(asset.path,asset.mime);
+  const blob=await fetchAttachmentBlob(asset);
+  if(my!==filePreviewGeneration||generation!==openGeneration)return;
+  if(kind==='image'||kind==='pdf'||kind==='audio'||kind==='video'){
+   filePreviewUrl=URL.createObjectURL(blob);body.replaceChildren();
+   if(kind==='image'){const img=document.createElement('img');img.src=filePreviewUrl;img.alt=asset.path;img.className='preview-image';img.onerror=()=>{body.replaceChildren();body.append(previewNote('This image cannot be displayed here.',asset));};body.append(img);}
+   else if(kind==='pdf'){const frame=document.createElement('iframe');frame.src=filePreviewUrl;frame.className='preview-pdf';frame.title=asset.path;frame.setAttribute('aria-label','PDF preview of '+asset.path);body.append(frame);}
+   else{const media=document.createElement(kind);media.src=filePreviewUrl;media.controls=true;body.append(media);}
+   return;
+  }
+  if(kind==='sheet'){
+   const rows=parseDelimited(await blob.text(),fileExtension(asset.path)==='.tsv'?'\t':',').slice(0,200);
+   body.replaceChildren();body.append(previewTable(rows));return;
+  }
+  if(kind==='office'){
+   const result=await officePreview(asset.path,new Uint8Array(await blob.arrayBuffer()));
+   if(my!==filePreviewGeneration||generation!==openGeneration)return;
+   body.replaceChildren();
+   if(result.kind==='sheet')body.append(previewTable(result.rows.slice(0,200)));
+   else if(result.text)body.append(previewText(result.text));
+   else body.append(previewNote('No readable text was found in this document.',asset));
+   return;
+  }
+  if(kind==='text'){
+   let value=await blob.text();
+   if(fileExtension(asset.path)==='.json'){try{value=JSON.stringify(JSON.parse(value),null,2);}catch{}}
+   body.replaceChildren();body.append(previewText(value.slice(0,200000)));return;
+  }
+  body.replaceChildren();body.append(previewNote('Preview is not available for this file type yet.',asset));
+ }catch(e){if(my===filePreviewGeneration){body.replaceChildren();body.append(previewNote('Preview could not be loaded: '+e.message,asset));}}
+}
+function previewText(value){const pre=document.createElement('pre');pre.className='file-preview-text';pre.textContent=value;return pre;}
+function previewTable(rows){
+ const wrap=document.createElement('div');wrap.className='file-preview-tablewrap';const table=document.createElement('table');
+ for(const row of rows){const tr=document.createElement('tr');for(const cell of row){const td=document.createElement('td');td.textContent=cell;tr.append(td);}table.append(tr);}
+ if(!rows.length){const p=document.createElement('p');p.className='file-preview-note';p.textContent='This file is empty.';return p;}
+ wrap.append(table);return wrap;
+}
+function previewNote(text,asset){
+ const box=document.createElement('div');box.className='file-preview-note';
+ const p=document.createElement('p');p.textContent=text;box.append(p);
+ const detail=document.createElement('p');detail.textContent=(asset?.path||'')+' is stored in your vault.';box.append(detail);
+ return box;
+}
+async function openNote(path,type=fileType(path),fromHistory=false) { if(type==='file'){try{await openAttachmentFile(path,fromHistory);}catch(e){message(e.message);}return;}
  const generation=++openGeneration;
  if(current?.dirty&&settings.autoSave)save(current);
  if(path==='@tasks'){activeTab='@tasks';addTab(path,'tasks');showView('tasksView');renderBreadcrumb('Tasks');renderTasks();return;}
@@ -254,9 +428,9 @@ async function openNote(path,type=fileType(path),fromHistory=false) { if(type===
 function renderBreadcrumb(path) {
  const host=$('breadcrumb');host.replaceChildren();
  const parts=path.split('/');
- if(parts.length===1||!/\.(md|canvas|excalidraw)$/i.test(path)){const label=document.createElement('span');label.className='crumb-current';label.textContent=path.replace(/\.(md|canvas|excalidraw)$/i,'');host.append(label);return;}
+ if(parts.length===1||(!/\.(md|canvas|excalidraw)$/i.test(path)&&fileType(path)!=='file')){const label=document.createElement('span');label.className='crumb-current';label.textContent=path.replace(/\.(md|canvas|excalidraw)$/i,'');host.append(label);return;}
  parts.slice(0,-1).forEach((part,i)=>{const folder=parts.slice(0,i+1).join('/');const crumb=button(part,()=>revealFolder(folder),'crumb crumb-folder');crumb.setAttribute('aria-label','Show '+folder+' in file explorer');const sep=document.createElement('span');sep.className='crumb-separator';sep.setAttribute('aria-hidden','true');sep.textContent='/';host.append(crumb,sep);});
- const name=document.createElement('span');name.className='crumb-current';name.setAttribute('aria-current','page');name.textContent=parts.at(-1).replace(/\.(md|canvas|excalidraw)$/i,'');host.append(name);
+ const name=document.createElement('span');name.className='crumb-current';name.setAttribute('aria-current','page');name.textContent=fileType(path)==='file'?displayName(path):parts.at(-1).replace(/\.(md|canvas|excalidraw)$/i,'');host.append(name);
 }
 function revealFolder(path) {
  let prefix='';for(const part of path.split('/')){prefix+=(prefix?'/':'')+part;closedFolders.delete(prefix);}
@@ -264,7 +438,7 @@ function revealFolder(path) {
  const row=[...$('files').querySelectorAll('.folder')].find(el=>el.dataset.path===path);if(!row)return;
  row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});row.classList.add('revealed');setTimeout(()=>row.classList.remove('revealed'),1200);
 }
-function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const name of ['noteView','emptyView','graphView','canvasView','tasksView','whiteboardView'])$(name).hidden=name!==id;for(const name of ['viewModeButton','wordCount','characterCount'])$(name).hidden=id==='whiteboardView';if(id==='whiteboardView')$('modeStatus').textContent='Whiteboard';}
+function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const name of ['noteView','emptyView','graphView','canvasView','tasksView','whiteboardView','fileView'])$(name).hidden=name!==id;for(const name of ['viewModeButton','wordCount','characterCount'])$(name).hidden=id==='whiteboardView'||id==='fileView';if(id==='whiteboardView')$('modeStatus').textContent='Whiteboard';if(id==='fileView')$('modeStatus').textContent='File preview';}
 function syncBookmarkButton() {const button=$('bookmarkButton');if(!button)return;const bookmarked=!!current&&bookmarks.includes(current.path);button.classList.toggle('active',bookmarked);button.setAttribute('aria-pressed',String(bookmarked));if(button.dataset)button.dataset.tooltip=bookmarked?'Remove bookmark':'Bookmark note';button.setAttribute('aria-label',bookmarked?'Remove bookmark':'Bookmark note');}
 function afterSafe(action) {if(current?.dirty&&settings.autoSave){save(current).then(saved=>{if(saved)action();});}else if(current?.dirty){pendingSwitch=action;$('switchDialog').showModal();}else action();}
 function closeTab(path,onClosed=()=>{}) {
@@ -361,7 +535,7 @@ async function loadAttachment(asset) {
 }
 async function hydrateEmbeds() {
  for(const el of $('preview').querySelectorAll?.('[data-embed]')||[]){const asset=resolveAttachment(el.dataset.embed);if(!asset)continue;
-  try{const url=await loadAttachment(asset);if(asset.mime.startsWith('image/')){const img=document.createElement('img');img.src=url;img.alt=asset.path;img.className='note-image';el.replaceChildren(img);}else{const a=document.createElement('a');a.href=url;a.download=asset.path.split('/').pop();a.textContent='Download '+a.download;a.className='attachment-link';el.replaceChildren(a);}}catch{}
+  try{const url=await loadAttachment(asset);if(asset.mime.startsWith('image/')){const img=document.createElement('img');img.src=url;img.alt=asset.path;img.className='note-image';el.replaceChildren(img);}else{const a=document.createElement('a');a.href=url;a.textContent=asset.path.split('/').pop();a.className='attachment-link';a.onclick=e=>{e.preventDefault();requestOpen(asset.path,'file');};el.replaceChildren(a);}}catch{}
  }
 }
 function renderProperties() {const el=$('properties');if(!el?.replaceChildren)return;const meta=notes.find(n=>n.path===current?.path)?.frontmatter||{};el.replaceChildren();if(settings.propertiesInDocument==='hidden'||!Object.keys(meta).length){el.hidden=true;return;}
@@ -636,7 +810,7 @@ function canvasChanged(){if(!current)return;current.content=JSON.stringify(canva
 function renderCanvas(){if(!canvasState)return;const host=$('canvasCards');host.replaceChildren();host.style.transform='scale('+canvasZoom+')';for(const node of canvasState.nodes){const card=document.createElement('div');card.className='canvas-card'+(canvasSelected===node.id?' selected':'');card.style.left=node.x+'px';card.style.top=node.y+'px';card.style.width=node.width+'px';card.style.height=node.height+'px';card.dataset.id=node.id;const header=document.createElement('div');header.className='canvas-card-header';header.innerHTML=icon(node.type==='file'?'file':'text')+'<span>'+esc(node.type==='file'?title(node.file):'Text')+'</span>';const remove=button('',()=>{canvasState.nodes=canvasState.nodes.filter(n=>n.id!==node.id);canvasState.edges=canvasState.edges.filter(e=>e.fromNode!==node.id&&e.toNode!==node.id);canvasChanged();renderCanvas();});remove.innerHTML=icon('x');remove.dataset.tooltip='Remove card';remove.setAttribute('aria-label','Remove card');header.append(remove);const content=document.createElement('div');content.className='canvas-card-content';content.textContent=node.type==='file'?(notes.find(n=>n.path===node.file)?.content||node.file):node.text||'';card.append(header,content);card.onclick=e=>{if(e.target.closest('button'))return;if(canvasLinkFrom&&canvasLinkFrom!==node.id){canvasState.edges.push({id:crypto.randomUUID(),fromNode:canvasLinkFrom,fromSide:'right',toNode:node.id,toSide:'left'});canvasLinkFrom=null;$('canvasHint').textContent='Cards connected';canvasChanged();}canvasSelected=node.id;host.querySelectorAll('.canvas-card').forEach(c=>c.classList.toggle('selected',c.dataset.id===node.id));renderCanvasEdges();};content.ondblclick=()=>{if(node.type==='file'){requestOpen(node.file);return;}const ta=document.createElement('textarea');ta.value=node.text||'';content.replaceChildren(ta);ta.focus();ta.oninput=()=>{node.text=ta.value;canvasChanged();};ta.onblur=()=>renderCanvas();};header.onpointerdown=e=>{if(e.target.closest('button'))return;e.preventDefault();const start={x:e.clientX,y:e.clientY,nx:node.x,ny:node.y};header.setPointerCapture(e.pointerId);header.onpointermove=move=>{node.x=Math.round(start.nx+(move.clientX-start.x)/canvasZoom);node.y=Math.round(start.ny+(move.clientY-start.y)/canvasZoom);card.style.left=node.x+'px';card.style.top=node.y+'px';renderCanvasEdges();};header.onpointerup=()=>{header.onpointermove=null;header.onpointerup=null;canvasChanged();};};host.append(card);}renderCanvasEdges();}
 function renderCanvasEdges(){const svg=$('canvasEdges');svg.replaceChildren();if(!canvasState)return;for(const edge of canvasState.edges){const a=canvasState.nodes.find(n=>n.id===edge.fromNode),b=canvasState.nodes.find(n=>n.id===edge.toNode);if(!a||!b)continue;const x1=(a.x+a.width)*canvasZoom,y1=(a.y+a.height/2)*canvasZoom,x2=b.x*canvasZoom,y2=(b.y+b.height/2)*canvasZoom;const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',`M${x1} ${y1} C${x1+70} ${y1},${x2-70} ${y2},${x2} ${y2}`);svg.append(p);}}
 function addCanvasCard(type='text',file=null){if(!canvasState)return;const index=canvasState.nodes.length;canvasState.nodes.push({id:crypto.randomUUID(),type,x:80+(index%3)*290,y:70+Math.floor(index/3)*200,width:260,height:170,...(type==='file'?{file}:{text:'New card'})});canvasChanged();renderCanvas();}
-async function uploadAttachment(file){if(!current||current.type!=='note'){message('Open a note before inserting an attachment.');return;}if(!attachmentExtensions.has(fileExtension(file.name))){message('Could not import '+file.name+'. Supported files include images, audio, video, PDF and office documents.');return;}try{const buffer=await droppedFileBytes(file);if(buffer.length>16*1024*1024)throw new Error('Attachment exceeds 16 MiB.');const folder=attachmentFolderFor();const name=(folder?folder+'/':'')+file.name;await api('attachment',{path:name,base64:fileToBase64(buffer)});await refresh();insertText('![['+name+']]');}catch(e){message(e.message);}}
+async function uploadAttachment(file){if(!current||current.type!=='note'){message('Open a note before inserting an attachment.','warning');return;}if(!attachmentExtensions.has(fileExtension(file.name))){message('Could not import '+file.name+'. Supported files include images, audio, video, PDF and office documents.');return;}try{const buffer=await droppedFileBytes(file);if(buffer.length>32*1024*1024)throw new Error('Attachment exceeds 32 MiB.');const folder=attachmentFolderFor();const name=(folder?folder+'/':'')+file.name;await api('attachment',{path:name,base64:fileToBase64(buffer)});await refresh();insertText('![['+name+']]');}catch(e){message(e.message);}}
 function initEvents(){
  if(window.SlateRibbon)ribbonLayout=window.SlateRibbon.mount(document.querySelector('.ribbon-tools'),{
   getOrder:()=>settings.ribbonOrder,
@@ -665,7 +839,7 @@ function initEvents(){
  $('viewModeButton').onclick=()=>setMode(mode==='edit'?'preview':'edit');$('bookmarkButton').onclick=toggleBookmark;
  $('moreButton').onclick=event=>{
   const target=current&&activeTab===current.path?current:null;
-  const items=target?[menuItem('Save','file',()=>save(target),{disabled:saving,shortcut:'Ctrl S'}),menuItem(mode==='edit'?'Reading view':'Editing view','book',()=>setMode(mode==='edit'?'preview':'edit')),target.type==='note'&&menuItem('Toggle split preview','panel-right',()=>{split=!split;setMode('edit');}),menuSeparator,...fileMenuItems(target)]:[menuItem('Open file recovery','history',openRecovery)];
+  const items=target&&target.type==='file'?fileMenuItems(target):target?[menuItem('Save','file',()=>save(target),{disabled:saving,shortcut:'Ctrl S'}),menuItem(mode==='edit'?'Reading view':'Editing view','book',()=>setMode(mode==='edit'?'preview':'edit')),target.type==='note'&&menuItem('Toggle split preview','panel-right',()=>{split=!split;setMode('edit');}),menuSeparator,...fileMenuItems(target)]:[menuItem('Open file recovery','history',openRecovery)];
   contextMenus.open(items,event,'Note options');
  };
  $('newForm').onsubmit=handleNew;$('cancelNew').onclick=()=>$('newDialog').close();$('dailyButton').onclick=dailyNote;$('vaultNameButton').onclick=showVaultMenu;
@@ -793,5 +967,5 @@ window.SlateWikiLinks?.mountSource($('editor'),{getNotes:()=>notes,getCurrentPat
 function mountLiveEditor(){if(!window.SlateEditor||liveEditor)return;const host=$('liveEditor');if(!host)return;liveEditor=window.SlateEditor.mount(host,{value:$('editor').value,lineNumbers:!!settings.showLineNumber,tabSize:settings.tabSize,useTab:!!settings.useTab,resolveAttachment,loadAttachment,getNotes:()=>notes,getCurrentPath:()=>current?.path,onChange:text=>draftChanged(text),onSave:save,onFollowLink:followLink,onToggleTask:toggleEditorTask,onTaskMetadata:editorTaskMetadata,renderTaskQuery,renderDataview,onDataviewClick:dataviewClick,onTaskClick:taskClick,icon});setMode(mode);}
 window.addEventListener('slate-editor-ready',mountLiveEditor);window.addEventListener('slate-editor-ready',hydrateCodeBlocks);
 async function init(){if(window.SlateNoteIcons)initIconPicker();hydrateIcons();window.SlateSelect?.enhance(document,icon);initEvents();installContextMenus();let state=storage.get('workspace',null);const pinState=desktop?await desktop.loadWorkspace():state;if(desktop)state=pinState||state;explorerPins=new Set(Array.isArray(pinState?.explorerPins)?pinState.explorerPins.filter(path=>typeof path==='string'):[]);if(state){settings={...settings,...state.settings};bookmarks=state.bookmarks||bookmarks;leftClosed=!!state.leftClosed;rightClosed=!!state.rightClosed;closedFolders=new Set(state.closedFolders||[]);for(const draft of state.drafts||[])drafts.set(draft.path,draft);tabs=state.tabs||[];activeTab=state.activeTab;}
- applySettings();await refresh();tabs=tabs.filter(t=>t.path==='@graph'||t.path==='@tasks'||allFiles().some(n=>n.path===t.path));mountLiveEditor();if(activeTab&&tabs.some(t=>t.path===activeTab))await openNote(activeTab,tabs.find(t=>t.path===activeTab).type);else if(notes.length)await openNote(notes.find(n=>n.path==='Welcome.md')?.path||notes[0].path);else showView('emptyView');setInterval(()=>{if(!saving)refresh().catch(()=>{});},15000);}
+ applySettings();await refresh();tabs=tabs.filter(t=>t.path==='@graph'||t.path==='@tasks'||explorerFiles().some(n=>n.path===t.path));mountLiveEditor();if(activeTab&&tabs.some(t=>t.path===activeTab))await openNote(activeTab,tabs.find(t=>t.path===activeTab).type);else if(notes.length)await openNote(notes.find(n=>n.path==='Welcome.md')?.path||notes[0].path);else showView('emptyView');setInterval(()=>{if(!saving)refresh().catch(()=>{});},15000);}
 init().catch(e=>message(e.message));

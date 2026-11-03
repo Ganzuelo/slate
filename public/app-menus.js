@@ -100,7 +100,7 @@ function pathMenu(target) {
 function fileMenuItems(target) {
  const note = Object.freeze({ path: target.path, type: target.type || 'note' });
  if (note.type === 'file') return [
-  menuItem('Open file', 'file', () => openNote(note.path, note.type)),
+  menuItem('Open file', typeof fileTypeIcon === 'function' ? fileTypeIcon(note.path, note.type) : 'file', () => openNote(note.path, note.type)),
   menuItem('Change icon…', 'image', () => openIconPicker(note.path, note.type)),
   menuItem(bookmarks.includes(note.path) ? 'Remove bookmark' : 'Bookmark', 'bookmark', () => bookmarkPath(note.path)),
   menuSeparator,
@@ -153,7 +153,7 @@ function closeMenuTabs(paths) {
  next();
 }
 function tabDisplayTitle(tab) { return tab.path === '@graph' ? 'Graph view' : tab.path === '@tasks' ? 'Tasks' : title(tab.path); }
-function tabDisplayIcon(tab) { return tab.path === '@graph' ? 'graph-star' : tab.path === '@tasks' ? 'check-square' : tab.type === 'whiteboard' ? 'presentation' : tab.type === 'canvas' ? 'layout' : 'notebook-text'; }
+function tabDisplayIcon(tab) { return tab.path === '@graph' ? 'graph-star' : tab.path === '@tasks' ? 'check-square' : tab.type === 'whiteboard' ? 'presentation' : tab.type === 'canvas' ? 'layout' : tab.type === 'file' && typeof fileTypeIcon === 'function' ? fileTypeIcon(tab.path, tab.type) : 'notebook-text'; }
 function bookmarkAllTabs() {
  const paths = tabs.filter(tab => !tab.path.startsWith('@')).map(tab => tab.path);
  bookmarks = [...new Set([...bookmarks, ...paths])];

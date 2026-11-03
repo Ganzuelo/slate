@@ -213,7 +213,19 @@ test('document and media attachments persist, are inventoried and read back', as
   assert.equal(sheet.mime, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   const bmp = await v.attachment('Images/Pic.bmp', Buffer.from('BMxxxx').toString('base64'));
   assert.equal(bmp.mime, 'image/bmp');
-  assert.deepEqual((await v.inventory()).attachments.map(a => a.path), ['Data/Table.csv', 'Docs/Book.xlsx', 'Docs/Report.pdf', 'Images/Pic.bmp']);
+  for (const name of ['Images/Photo.jpg', 'Images/Image.jpeg', 'Images/Upper.JPG']) {
+   const jpg = await v.attachment(name, Buffer.from([0xff, 0xd8, 0x00, 0x10, 1, 2]).toString('base64'));
+   assert.equal(jpg.mime, 'image/jpeg', name); assert.deepEqual((await v.readAttachment(name)).bytes.subarray(0, 2), Buffer.from([0xff, 0xd8]));
+  }
+  const code = await v.attachment('Code/app.js', Buffer.from('console.log(1)').toString('base64'));
+  assert.equal(code.mime, 'text/javascript');
+  const ico = await v.attachment('Images/Icon.ico', Buffer.from([0, 0, 1, 0, 1, 0]).toString('base64'));
+  assert.equal(ico.mime, 'image/x-icon');
+  const heic = await v.attachment('Images/Photo.heic', Buffer.from('heic-bytes').toString('base64'));
+  assert.equal(heic.mime, 'image/heic');
+  const archive = await v.attachment('Docs/Bundle.zip', Buffer.from('PK\x03\x04bundle').toString('base64'));
+  assert.equal(archive.mime, 'application/zip');
+  assert.deepEqual((await v.inventory()).attachments.map(a => a.path).sort(), ['Code/app.js', 'Data/Table.csv', 'Docs/Book.xlsx', 'Docs/Bundle.zip', 'Docs/Report.pdf', 'Images/Icon.ico', 'Images/Image.jpeg', 'Images/Photo.heic', 'Images/Photo.jpg', 'Images/Pic.bmp', 'Images/Upper.JPG'].sort());
   await assert.rejects(v.attachment('Docs/Fake.pdf', Buffer.from('not a pdf').toString('base64')), /does not match/);
   await assert.rejects(v.attachment('Docs/Evil.exe', Buffer.from('MZ').toString('base64')));
   await assert.rejects(v.attachment('Images/False.bmp', Buffer.from('ZZxxxx').toString('base64')), /does not match/);

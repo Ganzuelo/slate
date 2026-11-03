@@ -16,7 +16,7 @@ const conflict = message => Object.assign(new Error(message), { status: 409 });
 // Slate additionally stores typical office / data documents so they can be
 // kept in the vault, shown in the explorer and downloaded or previewed.
 export const attachmentTypes = {
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.tif': 'image/tiff', '.tiff': 'image/tiff', '.heic': 'image/heic', '.heif': 'image/heif',
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.flac': 'audio/flac', '.3gp': 'audio/3gpp',
   '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska', '.ogv': 'video/ogg', '.webm': 'video/webm',
   '.pdf': 'application/pdf', '.csv': 'text/csv', '.tsv': 'text/tab-separated-values', '.txt': 'text/plain', '.rtf': 'application/rtf',
@@ -24,7 +24,8 @@ export const attachmentTypes = {
   '.xls': 'application/vnd.ms-excel', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.ppt': 'application/vnd.ms-powerpoint', '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   '.odt': 'application/vnd.oasis.opendocument.text', '.ods': 'application/vnd.oasis.opendocument.spreadsheet', '.odp': 'application/vnd.oasis.opendocument.presentation',
-  '.epub': 'application/epub+zip', '.zip': 'application/zip', '.json': 'application/json', '.xml': 'application/xml', '.html': 'text/html', '.htm': 'text/html', '.base': 'text/yaml',
+  '.js': 'text/javascript', '.mjs': 'text/javascript', '.cjs': 'text/javascript', '.ts': 'text/typescript', '.tsx': 'text/typescript', '.jsx': 'text/javascript', '.css': 'text/css', '.scss': 'text/x-scss', '.less': 'text/x-less', '.py': 'text/x-python', '.rb': 'text/x-ruby', '.go': 'text/x-go', '.rs': 'text/x-rust', '.java': 'text/x-java', '.c': 'text/x-c', '.h': 'text/x-c', '.cpp': 'text/x-c++', '.hpp': 'text/x-c++', '.cs': 'text/x-csharp', '.php': 'text/x-php', '.sh': 'application/x-sh', '.yml': 'application/yaml', '.yaml': 'application/yaml', '.toml': 'application/toml', '.ini': 'text/plain', '.log': 'text/plain', '.sql': 'text/x-sql', '.vue': 'text/x-vue', '.svelte': 'text/x-svelte', '.lua': 'text/x-lua', '.r': 'text/x-r', '.psd': 'image/vnd.adobe.photoshop', '.ai': 'application/illustrator', '.eps': 'application/postscript', '.aac': 'audio/aac', '.aiff': 'audio/aiff', '.avi': 'video/x-msvideo', '.wmv': 'video/x-ms-wmv', '.mpg': 'video/mpeg', '.mpeg': 'video/mpeg', '.ics': 'text/calendar', '.vcf': 'text/vcard',
+  '.epub': 'application/epub+zip', '.zip': 'application/zip', '.7z': 'application/x-7z-compressed', '.rar': 'application/vnd.rar', '.tar': 'application/x-tar', '.gz': 'application/gzip', '.json': 'application/json', '.xml': 'application/xml', '.html': 'text/html', '.htm': 'text/html', '.base': 'text/yaml', '.pages': 'application/vnd.apple.pages', '.numbers': 'application/vnd.apple.numbers', '.key': 'application/vnd.apple.keynote',
 };
 export class Vault {
   constructor(root) { this.root = path.resolve(root); this.queue = Promise.resolve(); }
@@ -241,9 +242,9 @@ export class Vault {
   }
   attachment(name, base64) {
     return this.enqueue(async () => {
-      if (typeof base64 !== 'string' || base64.length > 24 * 1024 * 1024 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) throw new Error('Invalid attachment data or attachment exceeds 16 MiB.');
+      if (typeof base64 !== 'string' || base64.length > 48 * 1024 * 1024 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) throw new Error('Invalid attachment data or attachment exceeds 16 MiB.');
       const bytes = Buffer.from(base64, 'base64');
-      if (!bytes.length || bytes.length > 16 * 1024 * 1024) throw new Error('Attachment must be between 1 byte and 16 MiB.');
+      if (!bytes.length || bytes.length > 32 * 1024 * 1024) throw new Error('Attachment must be between 1 byte and 32 MiB.');
       const file = await this.file(name, true, 'attachment'), mime = attachmentTypes[path.extname(name).toLowerCase()];
       if (!validAttachment(bytes, mime)) throw new Error('Attachment content does not match its file type.');
       try { await fs.writeFile(file, bytes, { flag: 'wx' }); } catch (e) { if (e.code === 'EEXIST') throw conflict('An attachment already exists at that path.'); throw e; }
@@ -252,7 +253,7 @@ export class Vault {
   }
   async readAttachment(name) {
     const file = await this.file(name, false, 'attachment'), stat = await fs.stat(file);
-    if (stat.size > 16 * 1024 * 1024) throw new Error('Attachment exceeds 16 MiB.');
+    if (stat.size > 32 * 1024 * 1024) throw new Error('Attachment exceeds 32 MiB.');
     const bytes = await fs.readFile(file), mime = attachmentTypes[path.extname(name).toLowerCase()];
     if (!validAttachment(bytes, mime)) throw new Error('Attachment content does not match its file type.');
     return { bytes, mime };
@@ -322,11 +323,13 @@ function validateCanvas(content) {
 }
 function validAttachment(bytes, mime) {
   if (mime === 'image/png') return bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
-  if (mime === 'image/jpeg') return bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if (mime === 'image/jpeg') return bytes[0] === 255 && bytes[1] === 216;
   if (mime === 'image/gif') return /^GIF8[79]a$/.test(bytes.subarray(0,6).toString());
   if (mime === 'image/webp') return bytes.subarray(0,4).toString() === 'RIFF' && bytes.subarray(8,12).toString() === 'WEBP';
   if (mime === 'image/avif') return bytes.length >= 12 && bytes.subarray(4,8).toString() === 'ftyp' && ['avif','avis','mif1','mif2','msf1'].includes(bytes.subarray(8,12).toString());
   if (mime === 'image/bmp') return bytes.subarray(0,2).toString() === 'BM';
+  if (mime === 'image/x-icon') return bytes.length >= 4 && bytes[0] === 0 && bytes[1] === 0 && (bytes[2] === 1 || bytes[2] === 2) && bytes[3] === 0;
+  if (mime === 'image/tiff') return (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a && bytes[3] === 0) || (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0 && bytes[3] === 0x2a);
   if (mime === 'application/pdf') return bytes.subarray(0,5).toString() === '%PDF-';
   return Object.values(attachmentTypes).includes(mime) && bytes.length > 0;
 }

@@ -78,12 +78,90 @@ test('document files get a subdued extension label and notes do not', () => {
  assert.equal(run(`displayName('Inbox/Report.pdf')`), 'Report');
 });
 
+function storedZip(entries) {
+ const locals = [], centrals = []; let offset = 0;
+ for (const [name, text] of entries) {
+  const nameBytes = Buffer.from(name), data = Buffer.from(text);
+  const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(0, 8); local.writeUInt32LE(data.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(nameBytes.length, 26);
+  locals.push(local, nameBytes, data);
+  const central = Buffer.alloc(46); central.writeUInt32LE(0x02014b50, 0); central.writeUInt32LE(data.length, 20); central.writeUInt16LE(nameBytes.length, 28); central.writeUInt32LE(offset, 42);
+  centrals.push(central, nameBytes); offset += local.length + nameBytes.length + data.length;
+ }
+ const centralSize = centrals.reduce((sum, part) => sum + part.length, 0);
+ const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 10); end.writeUInt32LE(centralSize, 12); end.writeUInt32LE(offset, 16);
+ return new Uint8Array(Buffer.concat([...locals, ...centrals, end]));
+}
+
+test('clicking a document previews it in Slate instead of opening a save dialog', async () => {
+ const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+ const open = app.slice(app.indexOf('async function openAttachmentFile'), app.indexOf('async function renderFilePreview'));
+ assert.match(open, /showView\('fileView'\)/);
+ assert.match(open, /addTab\(path,'file'\)/);
+ assert.doesNotMatch(open, /window\.open|download/);
+ const run = setup();
+ assert.equal(run(`previewKind('Photo.JPG','image/jpeg')`), 'image');
+ assert.equal(run(`previewKind('Scan.heic','image/heic')`), 'none');
+ assert.equal(run(`previewKind('Report.pdf','application/pdf')`), 'pdf');
+ assert.equal(run(`previewKind('Book.xlsx','')`), 'office');
+ assert.equal(run(`previewKind('Data.csv','text/csv')`), 'sheet');
+ assert.deepEqual(JSON.parse(run(`JSON.stringify(parseDelimited('a,"b,c"\\n1,2',','))`)), [['a', 'b,c'], ['1', '2']]);
+});
+
+test('Office previews extract Word text and spreadsheet cells from the vault file', async () => {
+ const run = setup();
+ const docx = storedZip([['word/document.xml', '<w:p><w:t>Hello</w:t></w:p><w:p><w:t>World</w:t></w:p>']]);
+ const docResult = await run(`officePreview('Report.docx', new Uint8Array([${[...docx].join(',')}]))`);
+ assert.equal(docResult.kind, 'text'); assert.equal(docResult.text, 'Hello\nWorld');
+ const xlsx = storedZip([
+  ['xl/sharedStrings.xml', '<si><t>Name</t></si><si><t>Score</t></si>'],
+  ['xl/worksheets/sheet1.xml', '<row><c t="s"><v>0</v></c><c t="s"><v>1</v></c></row><row><c><v>42</v></c></row>'],
+ ]);
+ const sheetResult = await run(`officePreview('Book.xlsx', new Uint8Array([${[...xlsx].join(',')}]))`);
+ assert.equal(sheetResult.kind, 'sheet'); assert.deepEqual(JSON.parse(JSON.stringify(sheetResult.rows)), [['Name', 'Score'], ['42']]);
+});
+
+test('files get an intelligent Lucide icon for their type in sidebar, tab and header', () => {
+ const run = setup();
+ for (const path of ['Photo.jpg', 'Photo.jpeg', 'Photo.JPG', 'Image.png', 'Anim.gif', 'Pic.webp', 'Scan.tiff']) assert.equal(run(`fileTypeIcon('${path}','file')`), 'image', path);
+ for (const path of ['Note.md', 'Notes.txt', 'Letter.docx', 'Report.pdf', 'Manual.odt']) assert.equal(run(`fileTypeIcon('${path}','file')`), 'file-text', path);
+ assert.equal(run(`fileTypeIcon('Note.md','note')`), 'file-text');
+ for (const path of ['app.js', 'main.py', 'data.json', 'page.html', 'styles.css', 'query.sql', 'config.yaml']) assert.equal(run(`fileTypeIcon('${path}','file')`), 'code', path);
+ assert.equal(run(`fileTypeIcon('Data.csv','file')`), 'table');
+ assert.equal(run(`fileTypeIcon('Book.xlsx','file')`), 'table');
+ assert.equal(run(`fileTypeIcon('Deck.pptx','file')`), 'presentation');
+ assert.equal(run(`fileTypeIcon('Song.mp3','file')`), 'music');
+ assert.equal(run(`fileTypeIcon('Clip.mp4','file')`), 'video');
+ assert.equal(run(`fileTypeIcon('Bundle.zip','file')`), 'archive');
+ assert.equal(run(`fileTypeIcon('Board.canvas','canvas')`), 'layout');
+ assert.equal(run(`fileTypeIcon('Sketch.excalidraw','whiteboard')`), 'presentation');
+ assert.equal(run(`previewKind('app.js','text/javascript')`), 'text');
+});
+
+test('preview header matches note headings and has no download or reveal actions', async () => {
+ const html = await fs.readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+ const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+ const menus = await fs.readFile(new URL('../public/app-menus.js', import.meta.url), 'utf8');
+ assert.match(html, /id="fileView" class="note-view file-view"/);
+ assert.match(html, /class="document-heading"><h1 class="file-preview-heading"/);
+ assert.doesNotMatch(html, /fileDownload|fileReveal|Download a copy/);
+ assert.doesNotMatch(app, /downloadAttachment|fileDownload|fileReveal/);
+ assert.match(menus, /Show in system explorer/);
+});
+
+test('frontend attachment list stays in sync with the vault list', async () => {
+ const core = await fs.readFile(new URL('../core.mjs', import.meta.url), 'utf8');
+ const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+ const coreExts = [...core.match(/export const attachmentTypes = \{([\s\S]*?)\n\};/)[1].matchAll(/'(\.[a-z0-9]+)':/g)].map(m => m[1]);
+ const appExts = [...app.match(/const attachmentExtensions = new Set\(\[([\s\S]*?)\]\);/)[1].matchAll(/'(\.[a-z0-9]+)'/g)].map(m => m[1]);
+ assert.deepEqual([...appExts].sort(), [...coreExts].sort());
+});
+
 test('extension badge sits at the far right of the file row and is subdued', async () => {
  const css = await fs.readFile(new URL('../public/style.css', import.meta.url), 'utf8');
  const rule = css.match(/\.file-extension\{([^}]*)\}/)?.[1] || '';
  assert.match(rule, /margin-left:\s*auto/);
  assert.match(rule, /color:\s*var\(--faint\)/);
- assert.match(rule, /font-size:\s*10px/);
+ assert.match(rule, /font-size:\s*9px/);
  const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
  assert.match(app, /class="file-extension"/);
 });

@@ -52,7 +52,7 @@
    { h: 'Saving' },
    'Slate saves changes automatically, and {Ctrl+S} saves immediately. An unsaved tab shows a dot after its name. If another app changes the same file, Slate detects the conflict instead of overwriting it.',
    { h: 'Attachments' },
-   'Drag images (PNG, JPEG, GIF, WebP) or PDFs into a note to add them as attachments. Choose where they are stored in **Settings → Files and links**.',
+   'Drag images, audio, video, PDFs, or office documents into a note to add them as attachments. Choose where they are stored in **Settings → Files and links**.',
   ] },
   { group: 'Writing', id: 'links', title: 'Links and backlinks', icon: 'link', summary: 'Connect notes with wiki links.', blocks: [
    'Type `[[` to link to another note. Slate suggests matching notes as you type; press {Enter} to choose one.',
@@ -81,7 +81,7 @@
    { h: 'Pinning' },
    'Pin important notes and folders from their context menu to keep them at the top of the explorer.',
    { h: 'Importing files' },
-   'Drag Markdown, text, canvas, or whiteboard files from your computer onto the explorer to copy them into the vault. Drop them on a folder to place them there.',
+   'Drag Markdown, text, canvas, whiteboard, image, audio, video, PDF, CSV, or office files (such as DOCX, XLSX, and PPTX) from your computer onto the explorer to copy them into the vault — the file is imported automatically, with no save prompt. Drop them on a folder to place them there. Click a document in the explorer to preview it in Slate: images, PDFs, audio, and video play in place, spreadsheets show as tables, and Word, spreadsheet, and presentation files show their text. Use the download button in the preview only when you want a separate copy.',
    { h: 'Trash and recovery' },
    'Files you move to the trash are kept in the vault’s `.slate-recovery` folder. Before Slate overwrites a file, it keeps the previous version in `.slate-history`. Run **Open file recovery** from the command palette or the explorer menu to restore either.',
    'Turn off the delete confirmation in **Settings → Files and links**.',
