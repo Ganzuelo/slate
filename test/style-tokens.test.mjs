@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 // Colors may only be defined inside the :root (dark) and
 // html[data-theme=light] token blocks. Every rule outside those blocks must
 // reference a token, so light/dark themes can swap without hardcoded values.
-const cssFiles = ['style.css', 'controls.css', 'context-menu.css', 'editor.css', 'extras.css', 'note-icons.css', 'whiteboard.css'];
+const cssFiles = ['style.css', 'controls.css', 'context-menu.css', 'editor.css', 'extras.css', 'note-icons.css', 'whiteboard.css', 'help.css'];
 const colorLiteral = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|:\s*(?:white|black)\b/;
 
 function hardcodedColors(css) {

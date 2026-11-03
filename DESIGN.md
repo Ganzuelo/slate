@@ -72,7 +72,7 @@ At the user's request, whiteboards retain Excalidraw's original interface, inclu
 
 ## Vault footer
 
-- Place Settings immediately to the right of the vault-name button in the explorer footer.
+- Place Help (Lucide `circle-question-mark`) immediately to the right of the vault-name button in the explorer footer, followed by Settings. Help opens with the footer button, `F1`, or the Open help command.
 - Clicking the vault name opens an upward dropdown listing known vaults, marking the current vault, and offering Manage vaults.
 - Remember vaults across launches. The vault manager can open another folder, switch vaults, reveal the current folder, or remove an inactive vault from the list without deleting files.
 - Preserve the workspace before switching and retain unsaved-change protection. A canceled or failed switch must keep the existing vault usable.
@@ -83,3 +83,9 @@ At the user's request, whiteboards retain Excalidraw's original interface, inclu
 - Include sidebars, document tabs, settings, palettes, tasks, graph, canvas, and editor controls in the review.
 - Confirm icons render from local assets, labels remain accessible, and long text does not crowd icons.
 - Run `npm run build:icons` after changing the icon registry and `npm run build:editor` after changing the live editor. Commit generated bundles with their source and retained license notices.
+
+## Help
+
+- Help topics live in `public/help.js` as static content and render in the settings-style dialog: a searchable, grouped Lucide topic list on the left and the article on the right. Keep the search field pinned above the list.
+- Update the matching topic when a feature, setting, or shortcut changes. `test/help.test.mjs` requires every command-palette shortcut to appear in the shortcut reference and every cross-topic link to resolve.
+- Run `electron scripts/verify-help.cjs` after changing the dialog; it captures both themes to `evidence/`.

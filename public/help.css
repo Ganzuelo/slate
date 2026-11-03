@@ -1,0 +1,42 @@
+/* Help dialog: reuses the settings layout, with a searchable topic list and readable article content. */
+.vault-footer>#helpButton{flex:none;width:30px;height:30px;padding:6px}
+.vault-footer>#helpButton .icon{width:17px;height:17px}
+#closeHelp{position:absolute;right:12px;top:12px}
+.help-sidebar{display:flex;flex-direction:column;gap:4px}
+.help-search{position:sticky;top:-12px;z-index:1;margin:-12px 0 0;padding:14px 0 6px;background:var(--secondary)}
+.help-search>[data-icon]{position:absolute;left:9px;top:calc(50% + 4px);transform:translateY(-50%);display:inline-flex;color:var(--muted);pointer-events:none}
+.help-search .icon{width:14px;height:14px}
+dialog .help-search input{padding:6px 9px 6px 29px;font-size:13px;background:var(--bg)}
+.help-empty{color:var(--muted);font-size:13px;margin:12px 10px}
+.help-content{line-height:1.6;font-size:14px}
+.help-content>*{max-width:720px}
+.help-content h2{margin-bottom:6px}
+.help-content h2:focus-visible{outline:2px solid var(--focus);outline-offset:4px;border-radius:4px}
+.help-summary{color:var(--muted);margin:0 0 24px;font-size:15px}
+.help-content p{margin:0 0 12px}
+.help-heading{font-size:15px;font-weight:600;margin:24px 0 8px}
+.help-list{margin:0 0 12px;padding-left:22px}
+.help-list li{margin:0 0 6px;padding-left:2px}
+.help-content code{font:0.9em var(--code-font);background:var(--code-inline-bg);border-radius:4px;padding:1px 5px}
+.help-content kbd.hotkey-kbd{font-size:11.5px;padding:1px 6px}
+.help-code{background:var(--code-bg);border:1px solid var(--code-border);border-radius:8px;padding:12px 14px;margin:0 0 14px;overflow:auto}
+.help-code code{background:none;padding:0;color:var(--code-text);font-size:13px;white-space:pre}
+.help-link{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+.help-tip{display:flex;gap:10px;align-items:flex-start;background:var(--alt);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:16px 0}
+.help-tip>span{display:inline-flex;color:var(--muted);margin-top:3px}
+.help-tip .icon{width:16px;height:16px}
+.help-tip p{margin:0}
+.help-table{border-collapse:collapse;width:100%;margin:4px 0 16px;font-size:13.5px}
+.help-table th,.help-table td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.help-table th{color:var(--muted);font-weight:600;font-size:12.5px}
+.help-keys{background:var(--alt);border-radius:12px;padding:4px 16px;margin:4px 0 16px}
+.help-key-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--border)}
+.help-key-row:first-child{border-top:0}
+.help-key-row dd,.help-key-row dt{margin:0}
+.help-pager{display:flex;justify-content:space-between;gap:12px;margin-top:36px;padding-top:18px;border-top:1px solid var(--border)}
+.help-pager button{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:6px;max-width:48%}
+.help-pager button:hover{background:var(--hover)}
+.help-next{margin-left:auto;align-items:flex-end;text-align:right}
+.help-previous{align-items:flex-start;text-align:left}
+.help-pager-label{font-size:12px;color:var(--muted)}
+.help-pager-title{font-weight:600;color:var(--text)}
