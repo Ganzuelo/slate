@@ -85,15 +85,95 @@ html[data-theme=light]{--popover-shadow:0 4px 6px -1px #0001,0 10px 20px -4px #0
 
 .vault-footer>#settingsButton{flex:none;width:30px;height:30px;padding:6px}
 .vault-footer>#settingsButton .icon{width:17px;height:17px}
-.vault-manager{width:640px}
-.vault-manager>h2{margin-bottom:8px}
-#vaultManagerList{max-height:45vh;overflow:auto;margin-top:20px}
-.vault-manager-row{display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid var(--border)}
+/* Vault manager: a quiet list with a single, consistent action area. */
+.vault-manager{width:580px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;padding:28px;border-radius:12px}
+.vault-manager-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.vault-manager-logo{display:block;flex:none;object-fit:contain}
+.vault-manager-header h2{font-size:21px;font-weight:600;line-height:1.3;letter-spacing:-.025em;margin:0 0 5px}
+.vault-manager-header p{font-size:13px;line-height:1.5;margin:0}
+.vault-manager-heading{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 10px}
+#vaultManagerList{max-height:32vh;overflow:auto;display:flex;flex-direction:column;gap:4px;padding:4px;border:1px solid var(--border);border-radius:8px}
+.vault-manager-row{display:flex;flex:none;align-items:center;gap:12px;min-height:66px;padding:12px;border-radius:5px}
+.vault-manager-row.is-current{background:var(--active)}
+.vault-manager-row>.icon{flex:none;color:var(--muted);width:20px;height:20px}
 .vault-manager-details{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.vault-manager-details strong{font-size:14px;font-weight:600;overflow-wrap:anywhere}
-.vault-manager-details>span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.vault-manager-row>button{flex:none;min-width:30px;min-height:30px}
-.vault-current{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
-.vault-current .icon{width:14px;height:14px}
-#vaultManagerError{font-size:12px;color:var(--destructive)}
+.vault-manager-name{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.vault-manager-name strong{font-size:13px;font-weight:600;line-height:1.4;overflow-wrap:anywhere;min-width:0}
+.vault-manager-details>span{font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.vault-current{display:inline-flex;align-items:center;flex:none;gap:4px;color:var(--muted);font-size:11px;line-height:1.5}
+.vault-current .icon{width:12px;height:12px}
+.vault-manager-row-actions{display:flex;align-items:center;flex:none;gap:4px}
+.vault-manager-row-actions>button{min-width:30px;min-height:30px;padding:6px 8px;font-size:12px}
+.vault-manager-row-actions>button .icon{width:16px;height:16px}
+.vault-manager-hint{font-size:12px;line-height:1.5;margin:10px 0 24px}
+.vault-manager-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.vault-manager-actions button{display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:12px;min-height:64px;padding:12px 14px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text)}
+.vault-manager-actions button:hover{background:var(--hover)}
+.vault-manager-actions button>[data-icon]{flex:none;color:var(--muted)}
+.vault-action-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.vault-action-copy strong{font-size:12px;font-weight:600;line-height:1.4}
+.vault-action-copy>span{font-size:11px;line-height:1.4;color:var(--muted)}
+.vault-manager button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.vault-manager button:disabled{opacity:.45;cursor:default;background:transparent}
+.vault-manager-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border);padding-top:16px;margin-top:24px}
+.vault-manager-version{font-size:12px;color:var(--muted)}
+.vault-manager-version>span{margin-left:5px;color:var(--faint);font-size:11px}
+.vault-manager #closeVaultManager{min-width:72px;min-height:32px;background:var(--secondary);color:var(--text)}
+.vault-manager #closeVaultManager:hover{background:var(--hover)}
+#vaultManagerError{font-size:12px;line-height:1.5;color:var(--destructive);margin:12px 0}
+#vaultManagerError:empty{display:none}
+@media(max-width:480px){.vault-manager{padding:20px}.vault-manager-header{gap:12px;margin-bottom:24px}.vault-manager-logo{width:44px;height:44px}.vault-manager-header h2{font-size:19px}.vault-manager-actions{grid-template-columns:1fr}.vault-manager-row{gap:8px;padding:10px 8px}.vault-manager-row>.icon{width:16px;height:16px}.vault-manager-row-actions{gap:0}}
 @media(prefers-reduced-motion:no-preference){.ui-select-content:popover-open,.context-menu{animation:surface-in 100ms ease-out}@keyframes surface-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}}
+
+/* Guided vault creation shares the manager's local, theme-aware surfaces. */
+.vault-wizard-steps{display:flex;gap:8px;list-style:none;padding:0;margin:0 0 28px}
+.vault-wizard-steps li{display:flex;align-items:center;gap:8px;flex:1;padding:8px;border-radius:6px;font-size:12px;color:var(--muted)}
+.vault-wizard-steps li[aria-current=step]{background:var(--active);color:var(--text);font-weight:600}
+.vault-wizard-steps li>span{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--secondary);font-size:11px;font-variant-numeric:tabular-nums}
+.vault-wizard-panel{min-height:220px}
+.vault-wizard-title{font-size:16px;font-weight:600;line-height:1.4;margin:0 0 8px}
+.vault-wizard-title:focus{outline:none}
+.vault-wizard-panel p{font-size:12px;line-height:1.6;margin:0 0 20px}
+.vault-wizard-panel label{display:block;font-size:12px;font-weight:600;margin:0 0 8px}
+.vault-wizard-panel input{width:100%;min-width:0;height:36px;font-size:13px}
+.vault-wizard-panel input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.vault-wizard-panel input[aria-invalid=true]{border-color:var(--destructive)}
+.vault-wizard-panel input[readonly]{color:var(--muted)}
+.vault-wizard-panel input+p,.vault-wizard-location+p{margin-top:10px}
+.vault-wizard-location{display:flex;gap:8px}
+.vault-wizard-location button{flex:none;gap:6px;min-height:36px;padding:6px 12px;background:var(--secondary);color:var(--text)}
+.vault-wizard-location button:hover{background:var(--hover)}
+.vault-wizard-location .icon{width:16px;height:16px}
+.vault-wizard-summary{margin:0 0 14px;padding:4px 16px;background:var(--secondary);border-radius:6px}
+.vault-wizard-summary>div{padding:12px 0}
+.vault-wizard-summary>div+div{border-top:1px solid var(--border)}
+.vault-wizard-summary dt{font-size:11px;color:var(--muted);margin-bottom:4px}
+.vault-wizard-summary dd{font-size:13px;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.vault-wizard-navigation{display:flex;gap:8px}
+.vault-wizard-footer button,.vault-wizard .vault-manager-footer button{min-height:34px;padding:6px 14px}
+#vaultWizardError{font-size:12px;line-height:1.5;color:var(--destructive);margin:12px 0}
+#vaultWizardError:empty{display:none}
+@media(max-width:480px){.vault-wizard-steps{gap:4px}.vault-wizard-steps li{gap:5px;padding:6px 4px;font-size:11px}.vault-wizard-panel{min-height:240px}.vault-wizard-location{flex-wrap:wrap}.vault-wizard-location button{margin-left:auto}}
+/* Sonner-style toasts (public/toaster.js). Newest sits in front; hover or focus expands the stack. */
+.toaster{position:fixed;inset:auto 24px 44px auto;margin:0;padding:0;border:0;background:transparent;overflow:visible;width:356px;max-width:calc(100vw - 32px);z-index:1000;font:13px/1.4 var(--ui-font,'Segoe UI',sans-serif);outline:none}
+.toaster ol{display:grid;margin:0;padding:0;list-style:none}
+.toaster.expanded ol{display:flex;flex-direction:column-reverse;gap:8px}
+.toast{--index:0;--swipe:0px;grid-area:1/1;align-self:end;position:relative;z-index:calc(100 - var(--index));display:flex;align-items:flex-start;gap:10px;padding:14px 12px 14px 14px;border:1px solid var(--border);border-radius:8px;background:var(--popover);color:var(--text);box-shadow:var(--popover-shadow);opacity:0;transform:translate(var(--swipe),16px);transition:transform .2s ease,opacity .2s ease;touch-action:pan-y;user-select:none}
+.toast.mounted{opacity:1;transform:translate(var(--swipe),calc(var(--index) * -10px)) scale(calc(1 - var(--index) * .05))}
+.toaster:not(.expanded) .toast:not(.front){height:var(--front-height);overflow:hidden}
+.toast.mounted:not(.front)>*{opacity:0;transition:opacity .2s ease}
+.toaster.expanded .toast.mounted{transform:translateX(var(--swipe))}
+.toaster.expanded .toast.mounted>*{opacity:1}
+.toast.collapsed{display:none}
+.toast.removing,.toast.swiped{opacity:0;transform:translate(calc(var(--swipe) + 24px),0)}
+.toast-icon{flex:none;display:inline-flex;margin-top:1px}.toast-icon .icon{width:16px;height:16px}
+.toast[data-type=success] .toast-icon{color:var(--task-done)}.toast[data-type=info] .toast-icon{color:var(--task-low)}
+.toast[data-type=warning] .toast-icon{color:var(--task-high)}.toast[data-type=error] .toast-icon{color:var(--destructive)}
+.toast-body{flex:1;min-width:0;overflow-wrap:anywhere}.toast-title{font-weight:500}.toast-description{margin-top:2px;color:var(--muted)}
+.toast button{flex:none;border:0;border-radius:6px;font:inherit;cursor:pointer}
+.toast button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.toast-action{height:24px;padding:0 8px;background:var(--text);color:var(--bg);font-weight:500;font-size:12px}
+.toast-action:hover{opacity:.9}
+.toast-close{width:24px;height:24px;margin:-2px -2px 0 0;padding:0;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:var(--muted)}
+.toast-close:hover{background:var(--hover);color:var(--text)}.toast-close .icon{width:14px;height:14px}
+@media (prefers-reduced-motion:reduce){.toast,.toast>*{transition:none}}

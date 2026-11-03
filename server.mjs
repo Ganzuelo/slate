@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { Vault, resolveLink } from './core.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const { version: appVersion } = JSON.parse(await fs.readFile(path.join(here, 'package.json'), 'utf8'));
 const whiteboardAssets = JSON.parse(await fs.readFile(path.join(here, 'public/vendor/whiteboard/manifest.json'), 'utf8'));
 const args = process.argv.slice(2);
 const vaultArg = args.indexOf('--vault');
@@ -71,6 +72,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET') return send(405, { error: 'Method not allowed.' });
     const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/tasks.js': ['tasks.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/live-editor.js': ['live-editor.js', 'text/javascript'], '/editor.css': ['editor.css', 'text/css'], '/vendor/editor.js': ['vendor/editor.js', 'text/javascript'] };
     assets['/vendor/icons.js'] = ['vendor/icons.js', 'text/javascript'];
+    assets['/slate-logo.svg'] = ['../desktop/assets/slate-mark.svg', 'image/svg+xml'];
     assets['/vendor/note-icons.js'] = ['vendor/note-icons.js', 'text/javascript'];
     assets['/icon-picker.js'] = ['icon-picker.js', 'text/javascript'];
     assets['/note-icons.css'] = ['note-icons.css', 'text/css'];
@@ -84,11 +86,12 @@ const server = http.createServer(async (req, res) => {
     assets['/wiki-links.js'] = ['wiki-links.js', 'text/javascript'];
     assets['/controls.js'] = ['controls.js', 'text/javascript'];
     assets['/calendar.js'] = ['calendar.js', 'text/javascript'];
+    assets['/task-controls.js'] = ['task-controls.js', 'text/javascript'];
     assets['/tooltips.js'] = ['tooltips.js', 'text/javascript'];
+    assets['/toaster.js'] = ['toaster.js', 'text/javascript'];
     assets['/ribbon.js'] = ['ribbon.js', 'text/javascript'];
     assets['/help.js'] = ['help.js', 'text/javascript'];
     assets['/help.css'] = ['help.css', 'text/css'];
-    assets['/task-controls.js'] = ['task-controls.js', 'text/javascript'];
     assets['/graph-layout.js'] = ['graph-layout.js', 'text/javascript'];
     assets['/graph-view.js'] = ['graph-view.js', 'text/javascript'];
     assets['/extras.css'] = ['extras.css', 'text/css'];
@@ -104,7 +107,7 @@ const server = http.createServer(async (req, res) => {
     const asset = assets[url.pathname];
     if (!asset) return send(404, { error: 'Not found.' });
     let content = await fs.readFile(path.join(here, 'public', asset[0]), 'utf8');
-    if (asset[0] === 'index.html') content = content.replace('</head>', `<meta name="style-nonce" content="${styleNonce}"></head>`);
+    if (asset[0] === 'index.html') content = content.replace('{{APP_VERSION}}', String(appVersion).replace(/[&<>"']/g, '')).replace('</head>', `<meta name="style-nonce" content="${styleNonce}"></head>`);
     if (asset[0] === 'vendor/dataview-worker.js') headers['Content-Security-Policy'] = "default-src 'none'; script-src 'unsafe-eval'; connect-src 'none'; worker-src 'none'";
     send(200, content, asset[1]);
   } catch (e) { send(e.status || (e.code === 'ENOENT' ? 404 : 400), { error: e.message }); }

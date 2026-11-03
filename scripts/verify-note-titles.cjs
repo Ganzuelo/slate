@@ -30,7 +30,7 @@ app.whenReady().then(async()=>{
   await run("$('title').focus();$('title').textContent='Canceled';$('title').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
   assert.equal(await run("$('title').textContent"),'Renamed');
   await run("$('title').focus();$('title').textContent='Untitled 1';$('title').blur()");
-  await until("!saving && $('message').textContent.includes('already exists')");
+  await until("!saving && lastMessage.includes('already exists')");
   assert.equal(await run('current.path'),'Renamed.md');
   for(const theme of ['dark','light']){
    await run(`message();settings.theme='${theme}';applySettings();$('title').focus()`);

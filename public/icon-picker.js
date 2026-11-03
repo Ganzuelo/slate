@@ -26,7 +26,7 @@ async function saveIconConfig(change) {
  } finally { iconWriteBusy = false; }
 }
 function openIconPicker(path, kind = 'note') {
- if (!vaultIcons) { message('Icon settings are unavailable. Refresh the vault and try again.'); return; }
+ if (!vaultIcons) { message('Icon settings are unavailable. Refresh the vault and try again.','warning'); return; }
  iconPickerTarget = Object.freeze({path,kind});
  const assignment = assignedIcon(path,kind);
  iconPickerName = assignment?.icon || (kind === 'folder' ? 'folder' : kind === 'canvas' ? 'layout-dashboard' : 'notebook-text');

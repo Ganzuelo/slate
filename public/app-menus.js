@@ -30,17 +30,21 @@ async function openVaultManager() {
   const vaults = desktop?.listVaults ? await desktop.listVaults() : [{ name: $('vaultName').textContent, current: true }];
   host.replaceChildren();
   for (const vault of vaults) {
-   const row = document.createElement('div'); row.className = 'vault-manager-row';
+   const row = document.createElement('div'); row.className = 'vault-manager-row'; row.setAttribute('role', 'listitem');
+   if (vault.current) row.className += ' is-current';
+   const symbol = document.createElement('span'); symbol.className = 'icon'; symbol.innerHTML = icon('vault'); symbol.setAttribute('aria-hidden', 'true'); row.append(symbol);
    const details = document.createElement('div'); details.className = 'vault-manager-details';
    const name = document.createElement('strong'); name.textContent = vault.name;
    const folder = document.createElement('span'); folder.textContent = vault.path || 'Vault switching is available in the desktop app.';
-   details.append(name, folder); row.append(details);
+   const heading = document.createElement('div'); heading.className = 'vault-manager-name'; heading.append(name);
+   details.append(heading, folder); row.append(details);
+   const actions = document.createElement('div'); actions.className = 'vault-manager-row-actions';
    if (vault.current) {
     const current = document.createElement('span'); current.className = 'vault-current'; current.innerHTML = icon('check');
-    const label = document.createElement('span'); label.textContent = 'Current'; current.append(label); row.append(current);
+    const label = document.createElement('span'); label.textContent = 'Current'; current.append(label); heading.append(current);
     if (desktop?.revealPath) {
      const reveal = button('', () => desktop.revealPath('', 'folder').catch(e => { error.textContent = e.message; }));
-     reveal.innerHTML = icon('folder-open'); reveal.dataset.tooltip = 'Show vault in system explorer'; reveal.setAttribute('aria-label', reveal.dataset.tooltip); row.append(reveal);
+     reveal.innerHTML = icon('folder-open'); reveal.dataset.tooltip = 'Show vault in system explorer'; reveal.setAttribute('aria-label', reveal.dataset.tooltip); actions.append(reveal);
     }
    } else {
     const open = button('Open', () => { dialog.close(); switchWorkspaceVault(() => desktop.openVault(vault.path)); });
@@ -50,13 +54,93 @@ async function openVaultManager() {
      catch (e) { error.textContent = e.message; remove.disabled = false; }
     });
     remove.innerHTML = icon('x'); remove.dataset.tooltip = 'Remove from list'; remove.setAttribute('aria-label', 'Remove ' + vault.name + ' from list');
-    row.append(open, remove);
+    actions.append(open, remove);
    }
-   host.append(row);
+   row.append(actions); host.append(row);
   }
   $('openVaultFolder').hidden = !desktop?.selectVault;
+  $('createVault').hidden = !desktop?.createVault;
+  $('vaultManagerDesktopHint').hidden = !!desktop?.selectVault;
   if (!dialog.open) dialog.showModal();
  } catch (e) { if (!dialog.open) dialog.showModal(); error.textContent = e.message; }
+}
+function manageVaultFolder() {
+ const dialog = $('vaultManagerDialog');
+ dialog.close();
+ return switchWorkspaceVault(async () => {
+  try {
+   const result = await desktop.selectVault();
+   if (!result?.changed) await openVaultManager();
+  } catch (error) {
+   await openVaultManager();
+   $('vaultManagerError').textContent = error.message;
+  }
+ });
+}
+function openVaultWizard() {
+ if (!desktop?.chooseVaultLocation || !desktop?.createVault) return;
+ return afterSafe(() => {
+  const dialog = $('vaultWizardDialog'), error = $('vaultWizardError');
+  let step = 0, location = null, busy = false;
+  const name = $('vaultWizardName'), next = $('vaultWizardNext');
+  const panels = ['vaultWizardNameStep', 'vaultWizardLocationStep', 'vaultWizardReviewStep'];
+  name.value = ''; $('vaultWizardLocation').value = '';
+  const setBusy = value => {
+   busy = value;
+   dialog.setAttribute('aria-busy', String(value));
+   for (const id of ['vaultWizardNext', 'vaultWizardBack', 'vaultWizardCancel', 'vaultWizardBrowse']) $(id).disabled = value;
+  };
+  const render = () => {
+   error.textContent = '';
+   panels.forEach((id, index) => { $(id).hidden = index !== step; });
+   dialog.querySelectorAll('[data-vault-step]').forEach(el => {
+    if (Number(el.dataset.vaultStep) === step) el.setAttribute('aria-current', 'step');
+    else el.removeAttribute('aria-current');
+   });
+   $('vaultWizardBack').hidden = step === 0;
+   next.textContent = step === 2 ? 'Create vault' : 'Continue';
+   $('vaultWizardReviewName').textContent = name.value.trim();
+   $('vaultWizardReviewPath').textContent = location ? location.path.replace(/[\\/]$/, '') + location.separator + name.value.trim() : '';
+   if (step === 0) name.focus();
+   else $(step === 1 ? 'vaultWizardLocationTitle' : 'vaultWizardReviewTitle').focus();
+  };
+  $('vaultWizardBack').onclick = () => { if (!busy) { step--; render(); } };
+  $('vaultWizardCancel').onclick = () => { if (!busy) dialog.close(); };
+  dialog.oncancel = event => { if (busy) event.preventDefault(); };
+  dialog.onclose = () => { openVaultManager().then(() => $('createVault').focus()); };
+  $('vaultWizardBrowse').onclick = async () => {
+   error.textContent = ''; setBusy(true);
+   try {
+    const chosen = await desktop.chooseVaultLocation();
+    if (chosen) { location = chosen; $('vaultWizardLocation').value = chosen.path; }
+   } catch (e) { error.textContent = e.message; }
+   finally { setBusy(false); $('vaultWizardBrowse').focus(); }
+  };
+  $('vaultWizardForm').onsubmit = async event => {
+   event.preventDefault();
+   if (busy) return;
+   error.textContent = '';
+   if (step === 0) {
+    const value = name.value.trim();
+    if (!value || /[\\/:*?"<>|\x00-\x1f]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/i.test(value)) {
+     error.textContent = 'Enter a valid name without slashes or filename punctuation.'; name.setAttribute('aria-invalid', 'true'); name.focus(); return;
+    }
+    name.removeAttribute('aria-invalid'); name.value = value;
+   }
+   if (step === 1 && !location) { error.textContent = 'Choose a parent folder to continue.'; $('vaultWizardBrowse').focus(); return; }
+   if (step < 2) { step++; render(); return; }
+   setBusy(true); next.textContent = 'Creating…';
+   try {
+    clearTimeout(persistTimer);
+    await desktop.saveWorkspace(workspace());
+    const result = await desktop.createVault(name.value);
+    if (!result?.changed) throw new Error('The vault could not be opened. Please try again.');
+   } catch (e) { error.textContent = e.message; setBusy(false); next.textContent = 'Create vault'; next.focus(); }
+  };
+  $('vaultManagerDialog').close();
+  setBusy(false); name.removeAttribute('aria-invalid');
+  dialog.showModal(); render();
+ });
 }
 function menuItem(label, glyph, action, extra = {}) { return { label, icon: glyph, action, ...extra }; }
 async function readMenuTarget(target) {
@@ -208,7 +292,7 @@ async function confirmMenuTrash() {
   if (tab) closeTab(note.path);
   else if (current?.path === note.path) { current = null; dirty = false; }
   await refresh(); $('confirmDialog').close(); trashTarget = null;
-  message('File moved to .slate-recovery. Restore it from File recovery.'); schedulePersist();
+  message('File moved to .slate-recovery. Restore it from File recovery.',{type:'success',action:{label:'File recovery',onClick:()=>openRecovery()}}); schedulePersist();
  } catch (error) { message(error.message); } finally { confirm.disabled = false; }
 }
 function editorMenuSnapshot() {

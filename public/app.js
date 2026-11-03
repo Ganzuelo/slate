@@ -27,7 +27,7 @@ function excalidrawEnabled() { return settings.excalidrawEnabled !== false; }
 function disableWhiteboardView() {
  if (current?.type !== 'whiteboard') return;
  unmountWhiteboard(); showView('emptyView'); renderBreadcrumb('No file is open');
- message('Excalidraw is disabled. Your whiteboard file is unchanged.');
+ message('Excalidraw is disabled. Your whiteboard file is unchanged.','info');
 }
 async function mountWhiteboard(note) {
  unmountWhiteboard(); const generation = whiteboardGeneration;
@@ -68,7 +68,14 @@ function icon(name, canonical = false) {
 }
 function hydrateIcons(root=document) { root.querySelectorAll?.('[data-icon]').forEach(el=>{el.innerHTML=icon(el.dataset.icon);}); }
 function button(text, action, className='') { const el=document.createElement('button');el.type='button';el.textContent=text;el.className=className;el.onclick=action;return el; }
-function message(text='') { $('message').textContent=text;$('message').hidden=!text; }
+// Alerts appear as toasts. Callers pass a type ('error' by default, 'warning', 'info' or 'success') or {type, id, description, action:{label,onClick}}.
+// Toasts expire or are dismissed by the user; an empty message only resets lastMessage.
+let lastMessage='';
+function message(text='',options='error') {
+ lastMessage=text;if(!text)return;
+ window.SlateToast?.show({...(typeof options==='string'?{type:options}:{type:'error',...options}),title:text});
+}
+function taskMovedAlert(){return {type:'warning',action:{label:'Refresh',onClick:()=>refresh().then(()=>{if(activeTab==='@tasks')renderTasks();update();}).catch(e=>message(e.message))}};}
 async function api(route,data) {
  const response=await fetch('/api/'+route,{method:data?'PUT':'GET',headers:{'X-Slate-Token':token||'',...(data?{'Content-Type':'application/json'}:{})},...(data?{body:JSON.stringify(data)}:{})});
  const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.error),{status:response.status});return result;
@@ -242,7 +249,7 @@ async function importDroppedFiles(files,folder) {
 }
 function empty(el,text) {const p=document.createElement('p');p.className='empty';p.textContent=text;el.append(p);}
 function renderTabs() {
- $('tabs').replaceChildren();for(const tab of tabs){const el=document.createElement('div');el.className='tab'+(activeTab===tab.path?' active':'')+(tab.pinned?' pinned':'');el.setAttribute('role','tab');el.setAttribute('aria-selected',String(activeTab===tab.path));el.tabIndex=0;el.innerHTML=(window.SlateNoteIcons&&!tab.path.startsWith('@')?fileIcon(tab.path,tab.type,tab.type==='whiteboard'?'presentation':tab.type==='canvas'?'layout':'notebook-text'):icon(tab.path==='@graph'?'graph-star':tab.path==='@tasks'?'check-square':tab.type==='whiteboard'?'presentation':tab.type==='canvas'?'layout':'notebook-text'))+'<span class="tab-label">'+esc(tab.path==='@graph'?'Graph view':tab.path==='@tasks'?'Tasks':title(tab.path))+(drafts.get(tab.path)?.dirty?' •':'')+'</span>';el.oncontextmenu=e=>showTabMenu(tab,e);el.onclick=()=>requestOpen(tab.path,tab.type);el.onkeydown=e=>{if(e.key==='Enter')requestOpen(tab.path,tab.type);};const close=button('',e=>{e.stopPropagation();if(tab.pinned){tab.pinned=false;renderTabs();schedulePersist();}else closeTab(tab.path);},'tab-close');close.innerHTML=icon(tab.pinned?'pin':'x');close.dataset.tooltip=tab.pinned?'Unpin':'Close';close.setAttribute('aria-label',(tab.pinned?'Unpin ':'Close ')+title(tab.path));el.append(close);$('tabs').append(el);if(window.SlateNoteIcons)hydrateNoteColors(el);}
+ $('tabs').replaceChildren();for(const tab of tabs){const el=document.createElement('div');el.className='tab'+(activeTab===tab.path?' active':'')+(tab.pinned?' pinned':'');el.setAttribute('role','tab');el.setAttribute('aria-selected',String(activeTab===tab.path));el.tabIndex=0;el.innerHTML=(window.SlateNoteIcons&&!tab.path.startsWith('@')?fileIcon(tab.path,tab.type,tab.type==='whiteboard'?'presentation':tab.type==='canvas'?'layout':tab.type==='file'?fileTypeIcon(tab.path,tab.type):'notebook-text'):icon(tab.path==='@graph'?'graph-star':tab.path==='@tasks'?'check-square':tab.type==='whiteboard'?'presentation':tab.type==='canvas'?'layout':'notebook-text'))+'<span class="tab-label">'+esc(tab.path==='@graph'?'Graph view':tab.path==='@tasks'?'Tasks':tab.type==='file'?displayName(tab.path):title(tab.path))+(drafts.get(tab.path)?.dirty?' •':'')+'</span>';el.oncontextmenu=e=>showTabMenu(tab,e);el.onclick=()=>requestOpen(tab.path,tab.type);el.onkeydown=e=>{if(e.key==='Enter')requestOpen(tab.path,tab.type);};const close=button('',e=>{e.stopPropagation();if(tab.pinned){tab.pinned=false;renderTabs();schedulePersist();}else closeTab(tab.path);},'tab-close');close.innerHTML=icon(tab.pinned?'pin':'x');close.dataset.tooltip=tab.pinned?'Unpin':'Close';close.setAttribute('aria-label',(tab.pinned?'Unpin ':'Close ')+title(tab.path));el.append(close);$('tabs').append(el);if(window.SlateNoteIcons)hydrateNoteColors(el);}
 }
 function addTab(path,type) {if(!tabs.some(t=>t.path===path))tabs.push({path,type});activeTab=path;renderTabs();schedulePersist();}
 function requestOpen(path,type=fileType(path),fromHistory=false) {openNote(path,type,fromHistory).catch(e=>message(e.message));}
@@ -355,6 +362,9 @@ async function renderFilePreview(asset,generation=openGeneration){
  if(filePreviewUrl&&typeof URL!=='undefined'&&URL.revokeObjectURL)URL.revokeObjectURL(filePreviewUrl);
  filePreviewUrl=null;
  $('filePreviewName').textContent=asset.path.split('/').pop();
+ $('modeStatus').textContent=[extensionLabel(asset.path)||'File',formatBytes(asset.size)].filter(Boolean).join(' · ');
+
+
  body.replaceChildren();const loading=document.createElement('p');loading.className='file-preview-note';loading.textContent='Loading preview\u2026';body.append(loading);
  try{
   const kind=previewKind(asset.path,asset.mime);
@@ -406,7 +416,7 @@ async function openNote(path,type=fileType(path),fromHistory=false) { if(type===
  if(current?.dirty&&settings.autoSave)save(current);
  if(path==='@tasks'){activeTab='@tasks';addTab(path,'tasks');showView('tasksView');renderBreadcrumb('Tasks');renderTasks();return;}
  if(path==='@graph'){activeTab='@graph';addTab(path,'graph');showView('graphView');renderBreadcrumb('Graph view');renderGraph();return;}
- if(type==='whiteboard'&&!excalidrawEnabled()){message('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw to open whiteboards.');if(!current)showView('emptyView');return;}
+ if(type==='whiteboard'&&!excalidrawEnabled()){message('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw to open whiteboards.',{type:'warning',action:{label:'Open settings',onClick:()=>openSettings('excalidraw')}});if(!current)showView('emptyView');return;}
  let note=drafts.get(path);
  if(!note||!note.dirty){const revision=note?.revision;const data=await api(type+'?path='+encodeURIComponent(path));if(generation!==openGeneration)return;note=drafts.get(path)||{type};if(!note.dirty&&!note.saving&&note.revision===revision)Object.assign(note,data,{original:data.content,dirty:false});drafts.set(path,note);}
  if(generation!==openGeneration)return;
@@ -439,7 +449,7 @@ function showView(id) {if(id!=='whiteboardView')unmountWhiteboard();for(const na
 function syncBookmarkButton() {const button=$('bookmarkButton');if(!button)return;const bookmarked=!!current&&bookmarks.includes(current.path);button.classList.toggle('active',bookmarked);button.setAttribute('aria-pressed',String(bookmarked));if(button.dataset)button.dataset.tooltip=bookmarked?'Remove bookmark':'Bookmark note';button.setAttribute('aria-label',bookmarked?'Remove bookmark':'Bookmark note');}
 function afterSafe(action) {if(current?.dirty&&settings.autoSave){save(current).then(saved=>{if(saved)action();});}else if(current?.dirty){pendingSwitch=action;$('switchDialog').showModal();}else action();}
 function closeTab(path,onClosed=()=>{}) {
- if(tabs.find(tab=>tab.path===path)?.pinned){message('Unpin this tab before closing it.');return;}
+ if(tabs.find(tab=>tab.path===path)?.pinned){message('Unpin this tab before closing it.','warning');return;}
  const draft=drafts.get(path);
  const finish=async()=>{
   tabs=tabs.filter(tab=>tab.path!==path);drafts.delete(path);
@@ -478,8 +488,8 @@ function save(requested) {
     if(current===target&&target.type==='note'&&next!==latest)syncSavedText(next);
     dirty=!!current?.dirty;renderTabs();schedulePersist();
    }while(target.dirty);
-   message();return true;
-  }catch(e){message(e.message+' Your draft is kept.');schedulePersist();return false;}
+   window.SlateToast?.dismiss('save:'+target.path);message();return true;
+  }catch(e){message(e.message+' Your draft is kept.',{id:'save:'+target.path,action:{label:'Retry',onClick:()=>save(target)}});schedulePersist();return false;}
   finally{target.saving=false;saving=false;refresh().catch(e=>message(e.message));}
  };
  const pending=saveTail.then(run);saveTail=pending.catch(()=>{});return pending;
@@ -567,7 +577,7 @@ const newFileTypes={
  canvas:{extension:'.canvas',create:name=>api('canvas',{path:name,content:JSON.stringify({nodes:[],edges:[]}),revision:null}).then(refresh)}
 };
 async function newFile(type,folder=''){
- if(type==='whiteboard'&&!excalidrawEnabled()){message('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw to create whiteboards.');return;}
+ if(type==='whiteboard'&&!excalidrawEnabled()){message('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw to create whiteboards.',{type:'warning',action:{label:'Open settings',onClick:()=>openSettings('excalidraw')}});return;}
  if(creatingNote)return;creatingNote=true;
  try{
   await refresh();
@@ -624,7 +634,7 @@ async function handleNew(e){e.preventDefault();const submit=$('confirmNew');subm
   await refresh();
   for(const note of notes){const draft=drafts.get(note.path);if(draft&&!draft.dirty)Object.assign(draft,{content:note.content,original:note.content,revision:note.revision});}
   if(wasActive)await openNote(result.path,target.type);else{renderTabs();renderFiles();if(current?.type==='note'&&!current.dirty)setText(current.content);}
-  message((dialogAction==='move'?'Moved':'Renamed')+' file. Updated '+result.updatedLinks+' links.');
+  message((dialogAction==='move'?'Moved':'Renamed')+' file. Updated '+result.updatedLinks+' links.','success');
  }
  else if(dialogAction==='whiteboard'||dialogAction==='copy'&&dialogTarget?.type==='whiteboard'){
   if(!excalidrawEnabled())throw new Error('Excalidraw is disabled. Turn it on in Settings › Core plugins › Excalidraw.');
@@ -639,7 +649,7 @@ async function handleNew(e){e.preventDefault();const submit=$('confirmNew');subm
 function toggleBookmark(){if(!current)return;if(bookmarks.includes(current.path))bookmarks=bookmarks.filter(p=>p!==current.path);else bookmarks.push(current.path);syncBookmarkButton();renderFiles();schedulePersist();}
 function formatDailyDate(date,format){const pad=n=>String(n).padStart(2,'0');return String(format||'YYYY-MM-DD').replace(/YYYY/g,date.getFullYear()).replace(/MM/g,pad(date.getMonth()+1)).replace(/DD/g,pad(date.getDate()));}
 async function dailyNote(){const date=formatDailyDate(new Date(),settings.dailyFormat);const name=(settings.dailyFolder?settings.dailyFolder.replace(/\/$/,'')+'/':'')+date+'.md';try{if(!notes.some(n=>n.path===name))await createNote(name);await openNote(name);}catch(e){message(e.message);}}
-async function chooseVault(){if(desktop){switchWorkspaceVault(()=>desktop.selectVault());}else message('Open another folder from the desktop app, or restart browser mode with --vault "folder path".');}
+async function chooseVault(){if(desktop){switchWorkspaceVault(()=>desktop.selectVault());}else message('Open another folder from the desktop app, or restart browser mode with --vault "folder path".','info');}
 function commands(){return [
  ['Change current file icon',()=>current&&openIconPicker(current.path,current.type),'Ctrl Shift J'],['Create new note',()=>newDialog(),'Ctrl N'],['Open quick switcher',()=>openPalette('notes'),'Ctrl O'],['Open tasks',()=>requestOpen('@tasks','tasks')],['Create new task',()=>openTaskDialog(),'Ctrl T'],['Edit task at cursor',editTaskAtCursor],['Toggle task at cursor',toggleTaskAtCursor,'Ctrl Enter'],['Open file recovery',openRecovery],['Open graph view',()=>{graphLocal=false;requestOpen('@graph','graph');}],['Open local graph',()=>{graphLocal=true;requestOpen('@graph','graph');}],['Create new whiteboard',()=>newDialog('Untitled.excalidraw','whiteboard')],['Create new canvas',()=>newDialog('Untitled.canvas','canvas')],['Open today’s daily note',dailyNote],['Insert template',()=>openPalette('templates')],['Toggle reading view',()=>setMode(mode==='edit'?'preview':'edit'),'Ctrl E'],['Toggle live preview',()=>{settings.livePreview=!settings.livePreview;applySettings();schedulePersist();}],['Save current file',save,'Ctrl S'],['Save a copy',()=>newDialog(current?current.path.replace(/\.(md|canvas|excalidraw)$/,' copy.$1'):'','copy')],['Rename current file',()=>current&&afterSafe(()=>newDialog(current.path,'rename'))],['Toggle split preview',()=>{split=!split;setMode('edit');}],['Toggle left sidebar',()=>{leftClosed=!leftClosed;applySettings();schedulePersist();}],['Toggle right sidebar',()=>{rightClosed=!rightClosed;applySettings();schedulePersist();}],['Open another vault',chooseVault],['Open settings',()=>openSettings(),'Ctrl ,'],['Open help',()=>openHelp(),'F1'],['Search all files',()=>setSidebar('search'),'Ctrl Shift F'],['Bookmark current file',toggleBookmark],['Open random note',()=>notes.length&&requestOpen(notes[Math.floor(Math.random()*notes.length)].path)],['Refresh vault',()=>refresh().catch(e=>message(e.message))]
  ].filter(item=>item[0]!=='Create new whiteboard'||excalidrawEnabled()).map(([label,action,info])=>({label,action,info:info||''}));}
@@ -831,7 +841,7 @@ function initEvents(){
  };
  $('whiteboardButton').onclick=()=>newFile('whiteboard');
  $('newButton').onclick=$('addTabButton').onclick=$('emptyNew').onclick=()=>newNote();$('folderButton').onclick=()=>newDialog('','folder');$('canvasButton').onclick=()=>newFile('canvas');
- $('refreshButton').onclick=()=>refresh().then(()=>message('Vault index refreshed. Open tabs retain their drafts.')).catch(e=>message(e.message));$('collapseButton').onclick=()=>{closedFolders=new Set(folders);renderFiles();schedulePersist();};
+ $('refreshButton').onclick=()=>refresh().then(()=>message('Vault index refreshed. Open tabs retain their drafts.','success')).catch(e=>message(e.message));$('collapseButton').onclick=()=>{closedFolders=new Set(folders);renderFiles();schedulePersist();};
  $('cancelTrash').onclick=()=>{$('confirmDialog').close();trashTarget=null;};$('confirmTrash').onclick=confirmMenuTrash;
  $('viewModeButton').onclick=()=>setMode(mode==='edit'?'preview':'edit');$('bookmarkButton').onclick=toggleBookmark;
  $('moreButton').onclick=event=>{
@@ -842,7 +852,7 @@ function initEvents(){
  $('newForm').onsubmit=handleNew;$('cancelNew').onclick=()=>$('newDialog').close();$('dailyButton').onclick=dailyNote;$('vaultNameButton').onclick=showVaultMenu;
  $('switcherButton').onclick=$('emptyOpen').onclick=()=>openPalette('notes');$('commandsButton').onclick=$('emptyCommands').onclick=()=>openPalette('commands');$('templateButton').onclick=()=>openPalette('templates');
  $('paletteInput').oninput=()=>{paletteIndex=0;renderPalette();};$('paletteInput').onkeydown=e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();paletteIndex=Math.max(0,Math.min(paletteVisible.length-1,paletteIndex+(e.key==='ArrowDown'?1:-1)));renderPalette();$('paletteResults').children[paletteIndex]?.scrollIntoView?.({block:'nearest'});}if(e.key==='Enter'){e.preventDefault();const item=paletteVisible[paletteIndex];if(item){$('paletteDialog').close();item.action();}}};
- $('closeVaultManager').onclick=()=>$('vaultManagerDialog').close();$('openVaultFolder').onclick=()=>{ $('vaultManagerDialog').close();chooseVault(); };$('helpButton').onclick=()=>openHelp();$('settingsButton').onclick=()=>openSettings();$('closeSettings').onclick=()=>$('settingsDialog').close();document.querySelectorAll?.('[data-settings]').forEach(b=>b.onclick=()=>renderSettings(b.dataset.settings));
+ $('closeVaultManager').onclick=()=>$('vaultManagerDialog').close();$('openVaultFolder').onclick=()=>manageVaultFolder();$('createVault').onclick=()=>openVaultWizard();$('helpButton').onclick=()=>openHelp();$('settingsButton').onclick=()=>openSettings();$('closeSettings').onclick=()=>$('settingsDialog').close();document.querySelectorAll?.('[data-settings]').forEach(b=>b.onclick=()=>renderSettings(b.dataset.settings));
  $('cancelSwitch').onclick=()=>{pendingSwitch=null;$('switchDialog').close();};$('discardSwitch').onclick=()=>{$('switchDialog').close();if(current){current.dirty=false;drafts.delete(current.path);}const action=pendingSwitch;pendingSwitch=null;action?.();};$('saveSwitch').onclick=async()=>{if(await save()){$('switchDialog').close();const action=pendingSwitch;pendingSwitch=null;action?.();}};
  $('preview').onclick=e=>{if(taskClick(e))return;const link=e.target.closest?.('[data-link]');if(link)followLink(link.dataset.link);};
  $('tasksButton').onclick=()=>requestOpen('@tasks','tasks');$('newTaskButton').onclick=()=>openTaskDialog();$('tasksSearch').oninput=renderTasks;$('taskList').onclick=taskClick;document.querySelectorAll?.('[data-task-filter]').forEach(b=>b.onclick=()=>{tasksFilter=b.dataset.taskFilter;document.querySelectorAll('[data-task-filter]').forEach(el=>el.classList.toggle('active',el===b));renderTasks();});$('taskForm').onsubmit=createTask;$('cancelTask').onclick=()=>$('taskDialog').close();$('closeRecovery').onclick=()=>$('recoveryDialog').close();
@@ -889,8 +899,8 @@ function renderDataview(el,source,kind='dataview',editorContent,onRendered){
 }
 function hydrateDataview(){for(const el of $('preview').querySelectorAll?.('[data-dataview]')||[])renderDataview(el,el.dataset.dataview,el.dataset.dataviewKind,getText());}
 function dataviewClick(event){if(taskClick(event))return;const link=event.target.closest?.('[data-link]');if(link)followLink(link.dataset.link);}
-async function toggleTask(path,line,expectedRaw){if(taskBusy)return;if(drafts.get(path)?.dirty){message('Save the unsaved changes in '+title(path)+' before updating its tasks.');return;}taskBusy=true;try{const note=await api('note?path='+encodeURIComponent(path));const task=window.SlateTasks.parseTasks([note]).find(t=>t.line===line);if(!task||(expectedRaw!==undefined&&task.raw!==expectedRaw))throw new Error('This task moved or changed. Refresh and try again.');const edit=window.SlateTasks.complete(task);const content=window.SlateTasks.applyTaskChange(note.content,task,edit);const result=await api('note',{path,content,revision:note.revision});if(drafts.has(path)){const draft=drafts.get(path);Object.assign(draft,{content,original:content,revision:result.revision,dirty:false});if(current===draft){setText(content);dirty=false;update();}}await refresh();if(activeTab==='@tasks')renderTasks();if(mode==='preview'||split)update();message(edit.warnings?.join(' ')||'');schedulePersist();}catch(e){message(e.message);}finally{taskBusy=false;}}
-function taskClick(e){const prop=e.target.closest?.('[data-task-property]');if(prop){const task=getTasks().find(t=>t.path===prop.dataset.taskNote&&t.line===Number(prop.dataset.taskLine)&&t.raw===prop.dataset.taskRaw);if(task)openTaskMetadata(task,prop.dataset.taskProperty,{currentTarget:prop});else message('This task moved or changed. Refresh and try again.');return true;}const edit=e.target.closest?.('[data-task-edit]');if(edit){const task=getTasks().find(t=>t.path===edit.dataset.taskEdit&&t.line===Number(edit.dataset.taskLine)&&t.raw===edit.dataset.taskRaw);if(task)openTaskDialog(task);else message('This task moved or changed. Refresh and try again.');return true;}const check=e.target.closest?.('[data-task-path]');if(check){if(check.dataset.taskPath===current?.path&&activeTab===current.path){const task=window.SlateTasks.parseTasks([{path:current.path,content:getText()}]).find(t=>t.line===Number(check.dataset.taskLine));if(!task||task.raw!==check.dataset.taskRaw){message('This task moved or changed. Refresh and try again.');return true;}toggleEditorTask(task.line,false);}else toggleTask(check.dataset.taskPath,Number(check.dataset.taskLine),check.dataset.taskRaw);return true;}const open=e.target.closest?.('[data-task-open]');if(open){openNote(open.dataset.taskOpen).then(()=>{const line=Number(open.dataset.line);const pos=current.content.split('\n').slice(0,line-1).join('\n').length+(line>1?1:0);if(liveEditor&&settings.livePreview){liveEditor.focus();liveEditor.setSelection(pos,pos);}else{$('editor').focus();$('editor').setSelectionRange(pos,pos);}}).catch(e=>message(e.message));return true;}return false;}
+async function toggleTask(path,line,expectedRaw){if(taskBusy)return;if(drafts.get(path)?.dirty){message('Save the unsaved changes in '+title(path)+' before updating its tasks.','warning');return;}taskBusy=true;try{const note=await api('note?path='+encodeURIComponent(path));const task=window.SlateTasks.parseTasks([note]).find(t=>t.line===line);if(!task||(expectedRaw!==undefined&&task.raw!==expectedRaw))throw new Error('This task moved or changed. Refresh and try again.');const edit=window.SlateTasks.complete(task);const content=window.SlateTasks.applyTaskChange(note.content,task,edit);const result=await api('note',{path,content,revision:note.revision});if(drafts.has(path)){const draft=drafts.get(path);Object.assign(draft,{content,original:content,revision:result.revision,dirty:false});if(current===draft){setText(content);dirty=false;update();}}await refresh();if(activeTab==='@tasks')renderTasks();if(mode==='preview'||split)update();message(edit.warnings?.join(' ')||'','warning');schedulePersist();}catch(e){message(e.message);}finally{taskBusy=false;}}
+function taskClick(e){const prop=e.target.closest?.('[data-task-property]');if(prop){const task=getTasks().find(t=>t.path===prop.dataset.taskNote&&t.line===Number(prop.dataset.taskLine)&&t.raw===prop.dataset.taskRaw);if(task)openTaskMetadata(task,prop.dataset.taskProperty,{currentTarget:prop});else message('This task moved or changed. Refresh and try again.',taskMovedAlert());return true;}const edit=e.target.closest?.('[data-task-edit]');if(edit){const task=getTasks().find(t=>t.path===edit.dataset.taskEdit&&t.line===Number(edit.dataset.taskLine)&&t.raw===edit.dataset.taskRaw);if(task)openTaskDialog(task);else message('This task moved or changed. Refresh and try again.',taskMovedAlert());return true;}const check=e.target.closest?.('[data-task-path]');if(check){if(check.dataset.taskPath===current?.path&&activeTab===current.path){const task=window.SlateTasks.parseTasks([{path:current.path,content:getText()}]).find(t=>t.line===Number(check.dataset.taskLine));if(!task||task.raw!==check.dataset.taskRaw){message('This task moved or changed. Refresh and try again.',taskMovedAlert());return true;}toggleEditorTask(task.line,false);}else toggleTask(check.dataset.taskPath,Number(check.dataset.taskLine),check.dataset.taskRaw);return true;}const open=e.target.closest?.('[data-task-open]');if(open){openNote(open.dataset.taskOpen).then(()=>{const line=Number(open.dataset.line);const pos=current.content.split('\n').slice(0,line-1).join('\n').length+(line>1?1:0);if(liveEditor&&settings.livePreview){liveEditor.focus();liveEditor.setSelection(pos,pos);}else{$('editor').focus();$('editor').setSelectionRange(pos,pos);}}).catch(e=>message(e.message));return true;}return false;}
 async function updateTaskMetadata(task, values) {
  if(taskBusy)return;taskBusy=true;
  try {
@@ -927,7 +937,7 @@ function openTaskMetadata(task, kind, event) {
 }
 function editorTaskMetadata(line, raw, kind, event){
  const task=window.SlateTasks.parseTasks([{path:current?.path||'',content:getText()}]).find(t=>t.line===line&&t.raw===raw);
- if(task)openTaskMetadata(task,kind,event);else message('This task moved or changed. Refresh and try again.');
+ if(task)openTaskMetadata(task,kind,event);else message('This task moved or changed. Refresh and try again.',taskMovedAlert());
 }
 function openTaskDialog(task=null){
  editingTask=task&&typeof task.raw==='string'?{...task}:null;
@@ -937,7 +947,7 @@ function openTaskDialog(task=null){
  $('taskError').textContent='';window.SlateTaskControls?.enhance($('taskDialog'),{icon,menus:contextMenus});$('taskDialog').showModal();$('taskText').focus();
 }
 function cursorTask(){if(!current||activeTab!==current.path||current.type!=='note')return null;const pos=liveEditor&&settings.livePreview?liveEditor.getSelection().from:$('editor').selectionStart;const content=getText(),line=content.slice(0,pos).split('\n').length;return window.SlateTasks.parseTasks([{path:current.path,content}]).find(t=>t.line===line);}
-function editTaskAtCursor(){const task=cursorTask();if(task)openTaskDialog(task);else message('Place the cursor on a task first.');}
+function editTaskAtCursor(){const task=cursorTask();if(task)openTaskDialog(task);else message('Place the cursor on a task first.','warning');}
 function toggleTaskAtCursor(){const task=cursorTask();if(task)toggleEditorTask(task.line);}
 async function createTask(e){
  e.preventDefault();if(taskBusy)return;taskBusy=true;$('taskSubmit').disabled=true;
@@ -958,8 +968,8 @@ async function createTask(e){
  }catch(e){$('taskError').textContent=e.message;}finally{taskBusy=false;$('taskSubmit').disabled=false;}
 }
 function replaceEditorText(next,focus=true){if(liveEditor&&settings.livePreview){const old=getText(),selection=liveEditor.getSelection();let from=0,end=old.length,nextEnd=next.length;while(from<end&&from<nextEnd&&old[from]===next[from])from++;while(end>from&&nextEnd>from&&old[end-1]===next[nextEnd-1]){end--;nextEnd--;}const map=pos=>pos<=from?pos:pos>=end?pos+nextEnd-end:nextEnd;liveEditor.replaceRange(from,end,next.slice(from,nextEnd),map(selection.from),map(selection.to),focus);}else{const pos=$('editor').selectionStart;setText(next);$('editor').setSelectionRange(Math.min(pos,next.length),Math.min(pos,next.length));draftChanged(next);}}
-async function openRecovery(){try{const data=await api('recovery');const host=$('recoveryList');host.replaceChildren();for(const entry of data.entries)for(const file of entry.files){const row=document.createElement('div');row.className='recovery-row';const label=document.createElement('span');label.textContent=file.path+' · '+entry.operation+' · '+new Date(entry.created).toLocaleString();const b=button('View snapshot',async()=>{try{const snapshot=await api('recovery?id='+encodeURIComponent(entry.id)+'&path='+encodeURIComponent(file.path));let expectedRevision=null;try{const existing=await api((fileType(file.path))+'?path='+encodeURIComponent(file.path));expectedRevision=existing.revision;}catch(e){if(notes.some(n=>n.path===file.path)||canvases.some(n=>n.path===file.path)||whiteboards.some(n=>n.path===file.path))throw e;}const preview=document.createElement('pre');preview.textContent=snapshot.content.slice(0,16000);const restore=button(expectedRevision?'Restore over current file':'Restore missing file',async()=>{try{if(drafts.get(file.path)?.dirty)throw new Error('Save or close this file’s unsaved draft before restoring.');await api('restore',{id:entry.id,path:file.path,expectedRevision});drafts.delete(file.path);await refresh();$('recoveryDialog').close();await openNote(file.path,fileType(file.path));message('Snapshot restored.');}catch(e){message(e.message);}});restore.className='primary';row.append(preview,restore);b.disabled=true;}catch(e){message(e.message);}});row.append(label,b);host.append(row);}if(!data.entries.length)empty(host,'No recovery snapshots yet.');$('recoveryDialog').showModal();}catch(e){message(e.message);}}
-function toggleEditorTask(line,focus=true){if(!current||current.type!=='note'||!window.SlateTasks)return;try{const text=getText();const task=window.SlateTasks.parseTasks([{path:current.path,content:text}]).find(t=>t.line===line);if(!task)throw new Error('Task not found at this line.');const edit=window.SlateTasks.complete(task);const next=window.SlateTasks.applyTaskChange(text,task,edit);replaceEditorText(next,focus);message(edit.warnings?.join(' ')||'');}catch(e){message(e.message);}}
+async function openRecovery(){try{const data=await api('recovery');const host=$('recoveryList');host.replaceChildren();for(const entry of data.entries)for(const file of entry.files){const row=document.createElement('div');row.className='recovery-row';const label=document.createElement('span');label.textContent=file.path+' · '+entry.operation+' · '+new Date(entry.created).toLocaleString();const b=button('View snapshot',async()=>{try{const snapshot=await api('recovery?id='+encodeURIComponent(entry.id)+'&path='+encodeURIComponent(file.path));let expectedRevision=null;try{const existing=await api((fileType(file.path))+'?path='+encodeURIComponent(file.path));expectedRevision=existing.revision;}catch(e){if(notes.some(n=>n.path===file.path)||canvases.some(n=>n.path===file.path)||whiteboards.some(n=>n.path===file.path))throw e;}const preview=document.createElement('pre');preview.textContent=snapshot.content.slice(0,16000);const restore=button(expectedRevision?'Restore over current file':'Restore missing file',async()=>{try{if(drafts.get(file.path)?.dirty)throw new Error('Save or close this file’s unsaved draft before restoring.');await api('restore',{id:entry.id,path:file.path,expectedRevision});drafts.delete(file.path);await refresh();$('recoveryDialog').close();await openNote(file.path,fileType(file.path));message('Snapshot restored.','success');}catch(e){message(e.message);}});restore.className='primary';row.append(preview,restore);b.disabled=true;}catch(e){message(e.message);}});row.append(label,b);host.append(row);}if(!data.entries.length)empty(host,'No recovery snapshots yet.');$('recoveryDialog').showModal();}catch(e){message(e.message);}}
+function toggleEditorTask(line,focus=true){if(!current||current.type!=='note'||!window.SlateTasks)return;try{const text=getText();const task=window.SlateTasks.parseTasks([{path:current.path,content:text}]).find(t=>t.line===line);if(!task)throw new Error('Task not found at this line.');const edit=window.SlateTasks.complete(task);const next=window.SlateTasks.applyTaskChange(text,task,edit);replaceEditorText(next,focus);message(edit.warnings?.join(' ')||'','warning');}catch(e){message(e.message);}}
 window.SlateWikiLinks?.mountSource($('editor'),{getNotes:()=>notes,getCurrentPath:()=>current?.path});
 function mountLiveEditor(){if(!window.SlateEditor||liveEditor)return;const host=$('liveEditor');if(!host)return;liveEditor=window.SlateEditor.mount(host,{value:$('editor').value,lineNumbers:!!settings.showLineNumber,tabSize:settings.tabSize,useTab:!!settings.useTab,resolveAttachment,loadAttachment,getNotes:()=>notes,getCurrentPath:()=>current?.path,onChange:text=>draftChanged(text),onSave:save,onFollowLink:followLink,onToggleTask:toggleEditorTask,onTaskMetadata:editorTaskMetadata,renderTaskQuery,renderDataview,onDataviewClick:dataviewClick,onTaskClick:taskClick,icon});setMode(mode);}
 window.addEventListener('slate-editor-ready',mountLiveEditor);window.addEventListener('slate-editor-ready',hydrateCodeBlocks);

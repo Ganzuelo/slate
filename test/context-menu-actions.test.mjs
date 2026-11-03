@@ -189,7 +189,7 @@ test('vault switching waits for workspace persistence and stops on a save failur
  const failed=setup({saveWorkspace:async()=>{throw new Error('Workspace could not be saved');},openVault:async()=>{opened=true;}});
  failed.run('afterSafe=action=>action();');
  await failed.run("switchWorkspaceVault(()=>desktop.openVault('second'))");
- assert.equal(opened,false);assert.equal(failed.run("$('message').textContent"),'Workspace could not be saved');
+ assert.equal(opened,false);assert.equal(failed.run("lastMessage"),'Workspace could not be saved');
 });
 
 test('with autosave disabled, dirty notes pause vault switching before any workspace or navigation request', () => {

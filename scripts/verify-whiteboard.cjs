@@ -19,7 +19,7 @@ app.whenReady().then(async()=>{
   win.webContents.session.webRequest.onBeforeRequest((details,cb)=>{if(/^https?:/.test(details.url)&&!details.url.startsWith(new URL(url).origin+'/'))remote.push(details.url);cb({cancel:false});});
   await win.loadURL(url);win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('Emulation.setFocusEmulationEnabled',{enabled:true});
   const run=code=>win.webContents.executeJavaScript(code,true);
-  async function until(code){for(let i=0;i<100;i++){if(await run(code))return;await pause(100);}throw new Error('Timed out: '+code+' '+await run("$('message').textContent"));}
+  async function until(code){for(let i=0;i<100;i++){if(await run(code))return;await pause(100);}throw new Error('Timed out: '+code+' '+await run("lastMessage"));}
   await until('!!current && !!liveEditor');
   await run("settings.autoSave=false;$('whiteboardButton').click()");await until("current?.path==='Untitled.excalidraw'");
   await until("!!document.querySelector('#whiteboardHost canvas')");

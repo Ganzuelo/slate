@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('slateDesktop', Object.freeze({
   isDesktop: true,
   setTheme: theme => ipcRenderer.invoke('slate:set-theme', theme),
   selectVault: () => ipcRenderer.invoke('slate:select-vault'),
+  chooseVaultLocation: () => ipcRenderer.invoke('slate:choose-vault-location'),
+  createVault: name => ipcRenderer.invoke('slate:create-vault', name),
   getVault: () => ipcRenderer.invoke('slate:get-vault'),
   listVaults: () => ipcRenderer.invoke('slate:list-vaults'),
   openVault: path => ipcRenderer.invoke('slate:open-vault', path),

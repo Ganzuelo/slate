@@ -69,6 +69,7 @@ async function startVault(vault) {
 }
 
 function registerBridge() {
+  let vaultLocation = null;
   const recentGesture = () => { if (Date.now() - lastGesture > 5000) throw new Error('Use a menu or keyboard action to access the clipboard or explorer.'); };
   ipcMain.handle('slate:clipboard-write', (event, text) => {
     senderServer(event); recentGesture();
@@ -130,6 +131,36 @@ function registerBridge() {
       const result = await dialog.showOpenDialog(window, { title: 'Open folder as vault', defaultPath: activeServer.vault, properties: ['openDirectory'] });
       if (result.canceled || !result.filePaths.length) return { changed: false };
       return await switchVault(result.filePaths[0]);
+    } finally { changingVault = false; }
+  });
+  ipcMain.handle('slate:choose-vault-location', async event => {
+    const server = senderServer(event); recentGesture();
+    if (changingVault) return null;
+    changingVault = true;
+    try {
+      const result = await dialog.showOpenDialog(window, { title: 'Choose a location for your new vault', buttonLabel: 'Choose location', defaultPath: path.dirname(server.vault), properties: ['openDirectory', 'createDirectory'] });
+      if (result.canceled || !result.filePaths.length) return null;
+      vaultLocation = { server, path: await fs.realpath(result.filePaths[0]) };
+      return { path: vaultLocation.path, separator: path.sep };
+    } finally { changingVault = false; }
+  });
+  ipcMain.handle('slate:create-vault', async (event, name) => {
+    const server = senderServer(event); recentGesture();
+    if (changingVault) return { changed: false };
+    if (!vaultLocation || vaultLocation.server !== server) throw new Error('Choose a location for your new vault first.');
+    if (typeof name !== 'string' || !name.trim() || name !== name.trim() || name.length > 120 || /[\\/:*?"<>|\x00-\x1f]/.test(name) || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/i.test(name)) throw new Error('Enter a valid vault name without slashes or filename punctuation.');
+    const destination = path.join(vaultLocation.path, name);
+    changingVault = true;
+    try {
+      // Never reuse or overwrite an existing folder: opening one is a separate action.
+      try { await fs.mkdir(destination); }
+      catch (error) {
+        if (error.code === 'EEXIST') throw new Error('That folder already exists. Choose a new name, or use Open folder as vault.');
+        throw error;
+      }
+      const result = await switchVault(destination);
+      vaultLocation = null;
+      return result;
     } finally { changingVault = false; }
   });
   ipcMain.handle('slate:window', (event, operation) => {

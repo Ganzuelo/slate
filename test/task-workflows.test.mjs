@@ -48,7 +48,7 @@ test('query actions refuse moved tasks and preserve newly unsaved source drafts'
  context.readNote={path:'Work.md',content:'- [ ] Different task',revision:'revision'};
  run(`writes=0;api=async(route,data)=>{if(data)writes++;return readNote;};refresh=async()=>{};`);
  await run(`toggleTask('Work.md',1,'- [ ] Old task')`);
- assert.equal(run('writes'),0);assert.match(elements.get('message').textContent,/moved or changed/);
+ assert.equal(run('writes'),0);assert.match(run('lastMessage'),/moved or changed/);
  run(`drafts.set('Work.md',{dirty:true,content:'- [ ] Unsaved'});`);
  await run(`toggleTask('Work.md',1,'- [ ] Different task')`);
  assert.equal(run('writes'),0);assert.equal(run(`drafts.get('Work.md').content`),'- [ ] Unsaved');
@@ -70,7 +70,7 @@ test('quick metadata updates use the active draft and reject stale task lines',a
  await run(`updateTaskMetadata(captured,{due:'2026-11-05',priority:'high'})`);
  assert.equal(run('current.content'),'Before\n- [ ] Draft 📅 2026-11-05 ⏫\nAfter');
  await run(`updateTaskMetadata(captured,{priority:'low'})`);
- assert.match(elements.get('message').textContent,/moved or changed/);
+ assert.match(run('lastMessage'),/moved or changed/);
  assert.equal(run('current.content'),'Before\n- [ ] Draft 📅 2026-11-05 ⏫\nAfter');
 });
 
@@ -94,6 +94,6 @@ test('quick metadata from the task list persists through Vault and protects edit
  assert.equal((await vault.read('Work.md')).content,'Before\r\n- [ ] Review 📅 2026-11-09 🔺\r\nAfter');
  run(`originalApi=api;api=async(...args)=>{const result=await originalApi(...args);drafts.set('Work.md',{dirty:true,content:'New unsaved text'});return result;};`);
  await run(`updateTaskMetadata(getTasks()[0],{priority:'low'})`);
- assert.match(elements.get('message').textContent,/unsaved/);
+ assert.match(run('lastMessage'),/unsaved/);
  assert.equal((await vault.read('Work.md')).content,'Before\r\n- [ ] Review 📅 2026-11-09 🔺\r\nAfter');
 });

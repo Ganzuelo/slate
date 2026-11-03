@@ -25,7 +25,7 @@ app.whenReady().then(async()=>{
   for(let i=0;i<60;i++){if(await run('!!current && !!liveEditor && !!vaultIcons'))break;await pause(50);}
 
 
-  assert.equal(await run('current?.path'),'Alpha.md',await run("$('message').textContent"));
+  assert.equal(await run('current?.path'),'Alpha.md',await run("lastMessage"));
   await run("openSettings('appearance')");
   assert.equal(await run("document.querySelectorAll('[data-settings] svg').length"),9,'menu icons render');
   assert.equal(await run("document.querySelectorAll('.accent-preset').length"),9);

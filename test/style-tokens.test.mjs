@@ -34,7 +34,7 @@ test('both themes define the same semantic tokens', async () => {
   const light = tokens(css.match(/html\[data-theme=light\]\{([^}]*)\}/)[1]);
   // Light only overrides color tokens; layout/font tokens stay shared.
   for (const token of light) assert.ok(dark.has(token), `light token ${token} has no dark counterpart`);
-  for (const token of ['--destructive', '--banner-bg', '--banner-text', '--callout-bg', '--callout-border', '--callout-title', '--highlight-bg', '--toggle-off', '--toggle-knob', '--scrollbar', '--scrollbar-hover', '--shadow-sm', '--shadow-md', '--shadow-lg', '--backdrop', '--graph-tag', '--graph-attachment']) {
+  for (const token of ['--destructive', '--task-done', '--task-high', '--task-low', '--callout-bg', '--callout-border', '--callout-title', '--highlight-bg', '--toggle-off', '--toggle-knob', '--scrollbar', '--scrollbar-hover', '--shadow-sm', '--shadow-md', '--shadow-lg', '--backdrop', '--graph-tag', '--graph-attachment']) {
     assert.ok(dark.has(token) && light.has(token), `${token} must be defined in both themes`);
   }
 });

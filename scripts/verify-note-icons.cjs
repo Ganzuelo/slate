@@ -24,7 +24,7 @@ app.whenReady().then(async()=>{
   const run=async code=>{try{return await win.webContents.executeJavaScript(code,true);}catch(error){console.error('Failed renderer check:',code);throw error;}};
   for(let i=0;i<60;i++){if(await run('!!current && !!liveEditor && !!vaultIcons'))break;await pause(50);}
 
-  assert.equal(await run('current?.path'), 'Alpha.md', await run("$('message').textContent"));
+  assert.equal(await run('current?.path'), 'Alpha.md', await run("lastMessage"));
   assert.equal(await run("document.querySelector('#title .note-icon')"),null,'no note-title decoration');
   assert.equal(await run("document.querySelector('[data-settings=icons]')"),null,'no Iconize settings');
   await run("openIconPicker('Projects/Beta.md','note');$('iconSearch').value='food';$('iconSearch').dispatchEvent(new Event('input'))");

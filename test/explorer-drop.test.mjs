@@ -50,7 +50,7 @@ test('reports unsupported, oversized and rejected files while importing the rest
  const big = {name: 'Big.md', size: 5 * 1024 * 1024, text: async () => ''};
  const imported = JSON.parse(JSON.stringify(await run('importDroppedFiles')([file('photo.png'), file('README'), big, file('bad?.md'), file('Good.md')], '')));
  assert.deepEqual(imported, ['photo.png', 'Good.md']);
- const text = run(`$('message').textContent`);
+ const text = run(`lastMessage`);
  assert.match(text, /Big\.md: File exceeds 4 MiB\./);
  assert.match(text, /bad\?\.md: Invalid note path\./);
  assert.match(text, /Could not import README\. The file explorer accepts Markdown, text, canvas, whiteboard, image, audio, video, PDF and office documents/);

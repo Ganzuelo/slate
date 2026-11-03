@@ -64,6 +64,14 @@ At the user's request, whiteboards retain Excalidraw's original interface, inclu
 - Use shared shadcn-style tooltips from `public/tooltips.js` and `public/controls.css` for all app hints. Set `data-tooltip` instead of native `title`. Center above/below the trigger horizontally or beside it vertically; ribbon hints open to the right. Tooltips must support keyboard focus, Escape, both themes, modal dialogs, and viewport collision handling. Use `data-tooltip-side` for an explicit preferred side.
 - References: [shadcn Select](https://ui.shadcn.com/docs/components/select) and [Dropdown Menu](https://ui.shadcn.com/docs/components/dropdown-menu). Adapt these patterns to Slate's local JavaScript UI.
 
+## Notifications
+
+- Errors, warnings, info and success alerts appear as shadcn [Sonner](https://ui.shadcn.com/docs/components/sonner)-style toasts from `public/toaster.js`, stacked at the bottom right above the status bar. Never add banners above notes.
+- Raise alerts with `message(text, type)` or `message(text, {type, id, description, action:{label, onClick}})`; the type defaults to `error`. Use a Lucide status icon per type (circle-x, triangle-alert, info, circle-check) in the theme's semantic colors, and keep the text readable on its own.
+- Every toast has a Dismiss button, closes on Escape while focused, and can be swiped right. Hover or focus expands the stack and pauses timers. Errors stay 8s, warnings 6s, info and success 4s.
+- Offer at most one action when there is a direct fix (Retry, Refresh, Open settings, File recovery). Give recoverable alerts an `id` so a retry replaces them and success can dismiss them.
+- The stack is a manual popover so it stays above modal dialogs. Run `electron scripts/verify-toasts.cjs` after changing it; it captures both themes to `evidence/`.
+
 ## Ribbon ordering
 
 - Far-left toolbar buttons can be dragged vertically to reorder. Save the order in app settings and restore it across launches.
